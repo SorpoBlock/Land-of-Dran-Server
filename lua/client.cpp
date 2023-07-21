@@ -177,7 +177,8 @@ static int setPlayer(lua_State *L)
             {
                 if(common_lua->dynamics[b]->serverID == dynamicID)
                 {
-                    common_lua->users[a]->controlling = common_lua->dynamics[b];
+                    common_lua->users[a]->setControlling(common_lua->dynamics[b]);
+                    //common_lua->users[a]->controlling = common_lua->dynamics[b];
 
                     for(unsigned int slot = 0; slot<inventorySize; slot++)
                     {
@@ -199,7 +200,8 @@ static int setPlayer(lua_State *L)
                 }
             }
 
-            common_lua->users[a]->controlling = 0;
+            //common_lua->users[a]->controlling = 0;
+            common_lua->users[a]->setControlling(0);
             return 0;
         }
     }

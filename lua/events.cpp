@@ -722,7 +722,7 @@ void unifiedWorld::spawnPlayer(clientData *source,float x,float y,float z)
         if(source->controlling)
         {
             removeDynamic(source->controlling);
-            source->controlling = 0;
+            source->setControlling(0);
         }
 
         dynamic *theirPlayer = addDynamic(0,source->preferredRed,source->preferredGreen,source->preferredBlue);
@@ -734,7 +734,8 @@ void unifiedWorld::spawnPlayer(clientData *source,float x,float y,float z)
 
         setShapeName(theirPlayer,source->name,source->preferredRed,source->preferredGreen,source->preferredBlue);
 
-        source->controlling = theirPlayer;
+        //source->controlling = theirPlayer;
+        source->setControlling(theirPlayer);
         source->cameraBoundToDynamic = true;
         source->cameraTarget = theirPlayer;
 

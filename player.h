@@ -37,7 +37,10 @@ struct dynamicType
     std::vector<animation> animations;
     float eyeOffsetX,eyeOffsetY,eyeOffsetZ;
 
+    //Real values used in the physics engine and also sent to client:
     btVector3 finalHalfExtents;
+    btVector3 finalOffset;
+
     btVector3 aabbMin;
     btVector3 aabbMax;
     btMotionState *defaultMotionState = 0;
@@ -100,7 +103,9 @@ struct dynamic : btRigidBody
 
     virtual void sendToClient(serverClientHandle *client);
 
+    //Only changes physical properties, has nothing to do with networking:
     void makePlayer();
+
     //Returns true if player has just jumped
     bool control(float yaw,bool forward,bool backward,bool left,bool right,bool jump,btDynamicsWorld *world,bool allowTurning,bool relativeSpeed,std::vector<btVector3> &colors,std::vector<btVector3> &poses);
 

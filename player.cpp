@@ -252,6 +252,8 @@ dynamicType::dynamicType(std::string filePath,int id,btVector3 scale)
     std::cout<<"Offset: "<<offset.x()<<","<<offset.y()<<","<<offset.z()<<"\n";*/
 
     finalHalfExtents = size;
+    finalOffset = offset;
+
     btScalar masses[1];
     masses[0] = 1.0;
     t.setIdentity();

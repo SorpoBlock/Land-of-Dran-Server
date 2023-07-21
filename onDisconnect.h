@@ -41,7 +41,7 @@ void onDisconnect(server *host,serverClientHandle *client)
 
                 //std::cout<<"Succesfully deleted: "<<common->users[a]->controlling<<" dynamic id "<<common->users[a]->controlling->serverID<<"\n";
                 common->removeDynamic(common->users[a]->controlling);
-                common->users[a]->controlling = 0;
+                common->users[a]->setControlling(0);
             }
 
             for(int z = 0; z<common->users.size(); z++)

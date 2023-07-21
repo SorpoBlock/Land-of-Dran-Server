@@ -64,7 +64,8 @@ using namespace std::chrono;
 #define packetType_addBricksToBuiltCar 10
 #define packetType_luaPasswordResponse 11
 #define packetType_setColorPalette 12
-#define packetType_clientLuaConsoleText 13
+#define packetType_clientPhysicsData 13
+//#define packetType_clientLuaConsoleText 13
 //#define packetType_addGUIText 14
 #define packetType_ping 14
 #define packetType_removeBrickVehicle 15

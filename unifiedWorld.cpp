@@ -1,5 +1,25 @@
 #include "code/unifiedWorld.h"
 
+void clientData::setControlling(dynamic *player)
+{
+    controlling = player;
+
+    if(!player)
+        return;
+
+    packet physicsData;
+    physicsData.writeUInt(packetType_clientPhysicsData,packetTypeBits);
+    physicsData.writeUInt(player->serverID,dynamicObjectIDBits);
+    physicsData.writeFloat(player->type->finalHalfExtents.x());
+    physicsData.writeFloat(player->type->finalHalfExtents.y());
+    physicsData.writeFloat(player->type->finalHalfExtents.z());
+    physicsData.writeFloat(player->type->finalOffset.x());
+    physicsData.writeFloat(player->type->finalOffset.y());
+    physicsData.writeFloat(player->type->finalOffset.z());
+
+    netRef->send(&physicsData,true);
+}
+
 void unifiedWorld::removeLight(light *l)
 {
     if(l->attachedBrick)
@@ -317,7 +337,8 @@ void clientData::message(std::string text,std::string category)
 {
     packet data;
     data.writeUInt(packetType_addMessage,packetTypeBits);
-    data.writeBit(false); //is not bottom print
+    data.writeUInt(0,2); //is chat message
+    //data.writeBit(false); //is not bottom print
     data.writeString(text);
     data.writeString(category);
     netRef->send(&data,true);
@@ -327,7 +348,8 @@ void unifiedWorld::messageAll(std::string text,std::string category)
 {
     packet data;
     data.writeUInt(packetType_addMessage,packetTypeBits);
-    data.writeBit(false); //is not bottom print
+    data.writeUInt(0,2); //is chat message
+    //data.writeBit(false); //is not bottom print
     data.writeString(text);
     data.writeString(category);
     theServer->send(&data,true);
@@ -618,7 +640,8 @@ void clientData::bottomPrint(std::string text,int ms)
 {
     packet data;
     data.writeUInt(packetType_addMessage,packetTypeBits);
-    data.writeBit(true);  //is bottom text
+    data.writeUInt(1,2); //is bottom print
+    //data.writeBit(true);  //is bottom text
     data.writeString(text);
     data.writeUInt(ms,16);
     netRef->send(&data,true);
@@ -1684,7 +1707,7 @@ void unifiedWorld::removeDynamic(dynamic *toRemove,bool dontSendPacket)
     {
         if(users[a]->controlling == toRemove)
         {
-            users[a]->controlling = 0;
+            users[a]->setControlling(0);
         }
     }
 

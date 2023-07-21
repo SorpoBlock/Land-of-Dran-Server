@@ -98,6 +98,7 @@ struct clientData
     int lastPingID = 0;
     bool waitingOnPing = false;
     void sendPing();
+    void setControlling(dynamic *player);
 };
 
 struct brickNameVector

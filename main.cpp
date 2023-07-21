@@ -35,7 +35,8 @@ unifiedWorld *common_lua = 0;
 void updateClientConsoles(std::string text)
 {
     packet data;
-    data.writeUInt(packetType_clientLuaConsoleText,packetTypeBits);
+    data.writeUInt(packetType_addMessage,packetTypeBits);
+    data.writeUInt(2,2); //is console output
     data.writeString(text);
 
     for(unsigned int a = 0; a<common.users.size(); a++)
@@ -471,6 +472,7 @@ int main(int argc, char *argv[])
         }
 
         int msToWait = (msAtLastUpdate+20)-SDL_GetTicks();
+        //We send time of packet in milliseconds so if the millisecond is the same that will cause errors
         if(msToWait > 0)
             SDL_Delay(msToWait);
         int msDiff = SDL_GetTicks() - msAtLastUpdate;
