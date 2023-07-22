@@ -1097,6 +1097,21 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
             bool wasTyping = source->currentlyTyping;
             source->currentlyTyping = data->readBit();
 
+            bool useClientPhysics = data->readBit();
+            if(useClientPhysics)
+            {
+                float playerX = data->readFloat();
+                float playerY = data->readFloat();
+                float playerZ = data->readFloat();
+
+                if(source->controlling)
+                {
+                    btTransform t = source->controlling->getWorldTransform();
+                    t.setOrigin(btVector3(playerX,playerY,playerZ));
+                    source->controlling->setWorldTransform(t);
+                }
+            }
+
             if(wasTyping != source->currentlyTyping)
             {
                 packet data;
