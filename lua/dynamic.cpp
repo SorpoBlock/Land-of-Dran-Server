@@ -234,6 +234,18 @@ static int dynamicSetVelocity(lua_State *L)
             {
                 d->activate();
                 d->setLinearVelocity(btVector3(x,y,z));
+
+                if(d->isPlayer)
+                {
+                    for(int b = 0; b<common_lua->users.size(); b++)
+                    {
+                        if(common_lua->users[b]->controlling == d)
+                        {
+                            common_lua->users[b]->forceTransformUpdate();
+                        }
+                    }
+                }
+
                 return 0;
             }
         }
@@ -273,6 +285,18 @@ static int setPosition(lua_State *L)
                 btTransform t = d->getWorldTransform();
                 t.setOrigin(btVector3(x,y,z));
                 d->setWorldTransform(t);
+
+                if(d->isPlayer)
+                {
+                    for(int b = 0; b<common_lua->users.size(); b++)
+                    {
+                        if(common_lua->users[b]->controlling == d)
+                        {
+                            common_lua->users[b]->forceTransformUpdate();
+                        }
+                    }
+                }
+
                 return 0;
             }
         }
@@ -351,6 +375,17 @@ static int setRotation(lua_State *L)
                 btTransform t = d->getWorldTransform();
                 t.setRotation(btQuaternion(x,y,z,w));
                 d->setWorldTransform(t);
+
+                if(d->isPlayer)
+                {
+                    for(int b = 0; b<common_lua->users.size(); b++)
+                    {
+                        if(common_lua->users[b]->controlling == d)
+                        {
+                            common_lua->users[b]->forceTransformUpdate();
+                        }
+                    }
+                }
                 return 0;
             }
         }

@@ -1,14 +1,46 @@
 #include "code/unifiedWorld.h"
 
+void clientData::forceTransformUpdate()
+{
+    if(!controlling)
+        return;
+
+    packet forceTransform;
+    forceTransform.writeUInt(packetType_clientPhysicsData,packetTypeBits);
+    forceTransform.writeUInt(3,2);
+
+    btTransform t = controlling->getWorldTransform();
+
+    forceTransform.writeFloat(t.getOrigin().x());
+    forceTransform.writeFloat(t.getOrigin().y());
+    forceTransform.writeFloat(t.getOrigin().z());
+    forceTransform.writeFloat(t.getRotation().w());
+    forceTransform.writeFloat(t.getRotation().x());
+    forceTransform.writeFloat(t.getRotation().y());
+    forceTransform.writeFloat(t.getRotation().z());
+    forceTransform.writeFloat(controlling->getLinearVelocity().x());
+    forceTransform.writeFloat(controlling->getLinearVelocity().y());
+    forceTransform.writeFloat(controlling->getLinearVelocity().z());
+
+    netRef->send(&forceTransform,true);
+}
+
 void clientData::setControlling(dynamic *player)
 {
     controlling = player;
 
     if(!player)
+    {
+        packet removePhysicsData;
+        removePhysicsData.writeUInt(packetType_clientPhysicsData,packetTypeBits);
+        removePhysicsData.writeUInt(2,2);
+        netRef->send(&removePhysicsData,true);
         return;
+    }
 
     packet physicsData;
     physicsData.writeUInt(packetType_clientPhysicsData,packetTypeBits);
+    physicsData.writeUInt(0,2); //subtype, creating physics for a client to control
     physicsData.writeUInt(player->serverID,dynamicObjectIDBits);
     physicsData.writeFloat(player->type->finalHalfExtents.x());
     physicsData.writeFloat(player->type->finalHalfExtents.y());

@@ -363,6 +363,23 @@ int main(int argc, char *argv[])
             if(!player)
                 continue;
 
+            //Client physics position sync interpolation:
+            const float interpolationTime = 200.0;
+            float progress = SDL_GetTicks() - common.users[a]->interpolationStartTime;
+            if(progress < interpolationTime)
+            {
+                float lastProgress = common.users[a]->lastInterpolation - common.users[a]->interpolationStartTime;
+                float difference = progress - lastProgress;
+                difference /= interpolationTime;
+
+                btTransform t = player->getWorldTransform();
+                t.setOrigin(t.getOrigin() + common.users[a]->interpolationOffset * btVector3(difference,difference,difference));
+                player->setWorldTransform(t);
+
+
+                common.users[a]->lastInterpolation = SDL_GetTicks();
+            }
+
             float yaw = atan2(player->lastCamX,player->lastCamZ);
             bool playJumpSound = player->control(yaw,player->lastControlMask & 1,player->lastControlMask & 2,player->lastControlMask & 4,player->lastControlMask & 8,player->lastControlMask &16,common.physicsWorld,!common.users[a]->prohibitTurning,common.useRelativeWalkingSpeed,common.users[a]->debugColors,common.users[a]->debugPositions);
 
@@ -384,6 +401,7 @@ int main(int argc, char *argv[])
             if(!d)
                 continue;
 
+            //boyancy and jets
             float waterLevel = 15.0;
             if(!d->isJetting)
             {

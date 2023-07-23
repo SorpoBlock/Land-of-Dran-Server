@@ -93,6 +93,7 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                     btTransform t = source->controlling->getWorldTransform();
                     t.setOrigin(btVector3(x,y,z));
                     source->controlling->setWorldTransform(t);
+                    source->forceTransformUpdate();
                 }
             }
             else if(!source->adminOrb)
@@ -735,10 +736,14 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                     source->controlling->setWorldTransform(t);
                     source->controlling->setLinearVelocity(source->driving->body->getLinearVelocity());
 
+                    source->forceTransformUpdate();
+                    source->setControlling(source->controlling);
+
                     source->driving->occupied = false;
                     source->driving = 0;
                     source->controlling->sittingOn = 0;
                     source->sendCameraDetails();
+                    source->forceTransformUpdate();
                     return;
                 }
             }
@@ -820,6 +825,12 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                         source->controlling->oldCollisionFlags = source->controlling->getCollisionFlags();
                         source->controlling->setCollisionFlags(btCollisionObject::CF_NO_CONTACT_RESPONSE);
                         car->body->activate();
+
+                        packet giveUpPlayerControl;
+                        giveUpPlayerControl.writeUInt(packetType_clientPhysicsData,packetTypeBits);
+                        giveUpPlayerControl.writeUInt(1,2);
+                        client->send(&giveUpPlayerControl,true);
+
                         //source->cameraTarget = car->body;
                         source->sendCameraDetails();
                         common->playSound("PlayerMount",raystart.x(),raystart.y(),raystart.z(),false);
@@ -1103,12 +1114,20 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                 float playerX = data->readFloat();
                 float playerY = data->readFloat();
                 float playerZ = data->readFloat();
+                float velX = data->readFloat();
+                float velY = data->readFloat();
+                float velZ = data->readFloat();
 
                 if(source->controlling)
                 {
                     btTransform t = source->controlling->getWorldTransform();
-                    t.setOrigin(btVector3(playerX,playerY,playerZ));
-                    source->controlling->setWorldTransform(t);
+                    btVector3 p = t.getOrigin();
+                    /*t.setOrigin(btVector3(playerX,playerY,playerZ));
+                    source->controlling->setWorldTransform(t);*/
+                    source->interpolationOffset = btVector3(playerX,playerY,playerZ) - p;
+                    source->interpolationStartTime = SDL_GetTicks();
+                    source->lastInterpolation = SDL_GetTicks();
+                    source->controlling->setLinearVelocity(btVector3(velX,velY,velZ));
                 }
             }
 

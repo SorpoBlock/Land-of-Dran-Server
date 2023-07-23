@@ -33,6 +33,11 @@ struct clientData
     int totalLoadedWheels = 0;
     int carWheelsMadeSoFar = 0;
 
+    //Client physics:
+    float interpolationStartTime = 0;
+    float lastInterpolation = 0;
+    btVector3 interpolationOffset;
+
     //Why would I ever store these here
     emitter *leftJet = 0;
     emitter *rightJet = 0;
@@ -99,6 +104,7 @@ struct clientData
     bool waitingOnPing = false;
     void sendPing();
     void setControlling(dynamic *player);
+    void forceTransformUpdate();
 };
 
 struct brickNameVector
