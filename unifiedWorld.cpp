@@ -849,6 +849,12 @@ void unifiedWorld::removeBrickCar(brickCar *toRemove)
         if(users[a]->driving == toRemove)
         {
             users[a]->driving = 0;
+            if(users[a]->controlling)
+            {
+                users[a]->setControlling(users[a]->controlling);
+                users[a]->forceTransformUpdate();
+                users[a]->controlling->setCollisionFlags(users[a]->controlling->oldCollisionFlags);
+            }
         }
     }
 

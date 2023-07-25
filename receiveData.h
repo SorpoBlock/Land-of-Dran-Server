@@ -68,7 +68,7 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
         case toggleAdminOrb:
         {
             bool useAdmin = data->readBit();
-            if(!useAdmin)
+            if(!useAdmin) //end admin orb
             {
                 float x = data->readFloat();
                 float y = data->readFloat();
@@ -95,8 +95,16 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                     source->controlling->setWorldTransform(t);
                     source->forceTransformUpdate();
                 }
+
+                if(source->driving && source->driving->body)
+                {
+                    btTransform t = source->driving->body->getWorldTransform();
+                    t.setOrigin(btVector3(x,y,z));
+                    source->driving->body->setWorldTransform(t);
+                    source->driving->body->setLinearVelocity(btVector3(0,0,0));
+                }
             }
-            else if(!source->adminOrb)
+            else if(!source->adminOrb) //start admin orb
             {
                 float x=0,y=0,z=0;
                 if(source->controlling)
@@ -650,15 +658,22 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
             if(!source->lastWrenchedBrick->car)
             {
                 common->setBrickName(source->lastWrenchedBrick,name);
+
                 if(source->lastWrenchedBrick->body && !colliding)
                 {
                     common->physicsWorld->removeRigidBody(source->lastWrenchedBrick->body);
                     delete source->lastWrenchedBrick->body;
                     source->lastWrenchedBrick->body = 0;
+                    packet update;
+                    source->lastWrenchedBrick->createUpdatePacket(&update);
+                    common->theServer->send(&update,true);
                 }
                 else if(source->lastWrenchedBrick->body == 0 && colliding)
                 {
                     common->brickTypes->addPhysicsToBrick(source->lastWrenchedBrick,common->physicsWorld);
+                    packet update;
+                    source->lastWrenchedBrick->createUpdatePacket(&update);
+                    common->theServer->send(&update,true);
                 }
             }
 

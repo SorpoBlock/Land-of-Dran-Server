@@ -372,11 +372,17 @@ static int setBrickColliding(lua_State *L)
         common_lua->physicsWorld->removeRigidBody(passedBrick->body);
         delete passedBrick->body;
         passedBrick->body = 0;
+        packet update;
+        passedBrick->createUpdatePacket(&update);
+        common_lua->theServer->send(&update,true);
     }
     else if(passedBrick->body == 0 && colliding)
     {
         //std::cout<<"Adding body...\n";
         common_lua->brickTypes->addPhysicsToBrick(passedBrick,common_lua->physicsWorld);
+        packet update;
+        passedBrick->createUpdatePacket(&update);
+        common_lua->theServer->send(&update,true);
     }
 
     return 0;

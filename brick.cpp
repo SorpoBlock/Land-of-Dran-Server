@@ -75,6 +75,7 @@ void brick::createUpdatePacket(packet *data)
     }
     data->writeUInt(shapeFx,4);
     data->writeUInt(tmpMat,4);
+    data->writeBit(body);
 }
 
 void sayVec(btVector3 in)
