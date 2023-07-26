@@ -197,12 +197,13 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
 
             source->loadingCar->ownerID = source->playerID;
 
+
             if(data->readBit())
             {
                 //brick data
                 if(data->readBit())
                 {
-                    if(data->readBit())
+                    if(data->readBit()) //special bricks
                     {
                         int toRead = data->readUInt(8);
                         for(unsigned int i = 0; i<toRead; i++)
@@ -281,6 +282,8 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                     }
                     else //light
                     {
+                        source->loadingCarLights.clear();
+
                         source->loadedCarLights = true;
 
                         int howMany = data->readUInt(8);
@@ -301,8 +304,10 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                                 l->direction.setX(data->readFloat());
                                 l->direction.setY(data->readFloat());
                                 l->direction.setZ(data->readFloat());
-                                l->direction.setW(data->readFloat());
+                                l->direction.setW(acos(data->readFloat()));
                             }
+
+                            source->loadingCarLights.push_back(l);
                         }
                     }
                 }
@@ -738,7 +743,7 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
 
             if(!isLeft)
             {
-                if(source->driving && source->controlling)
+                if(source->driving && source->controlling) //dismount vehicle get out of car
                 {
                     source->driving->driveCar(false,false,false,false,false);
                     source->controlling->setCollisionFlags(source->controlling->oldCollisionFlags);
@@ -750,15 +755,15 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                     std::cout<<"Putting player at: "<<o.x()<<","<<o.y()<<","<<o.z()<<"\n";
                     source->controlling->setWorldTransform(t);
                     source->controlling->setLinearVelocity(source->driving->body->getLinearVelocity());
+                    source->controlling->setAngularVelocity(btVector3(0,0,0));
 
-                    source->forceTransformUpdate();
                     source->setControlling(source->controlling);
 
                     source->driving->occupied = false;
                     source->driving = 0;
                     source->controlling->sittingOn = 0;
                     source->sendCameraDetails();
-                    source->forceTransformUpdate();
+                    //source->forceTransformUpdate();
                     return;
                 }
             }
@@ -1090,6 +1095,7 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
         case playerControlPacket:
         {
             int controlMask = data->readUInt(5);
+            bool didJump = data->readBit(); //Just controls the sound
             bool leftMouseDown = data->readBit();
             bool rightMouseDown = data->readBit();
             bool usingPaint = data->readBit();
@@ -1177,6 +1183,9 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
             if(source->controlling)
             {
                 btVector3 pos = source->controlling->getWorldTransform().getOrigin();
+
+                if(didJump)
+                    common->playSoundExcept("Jump",pos.x(),pos.y(),pos.z(),source);
 
                 if(usingPaint && leftMouseDown && !source->paint)
                 {

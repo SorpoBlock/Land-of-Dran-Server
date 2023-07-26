@@ -384,8 +384,8 @@ int main(int argc, char *argv[])
             bool playJumpSound = player->control(yaw,player->lastControlMask & 1,player->lastControlMask & 2,player->lastControlMask & 4,player->lastControlMask & 8,player->lastControlMask &16,common.physicsWorld,!common.users[a]->prohibitTurning,common.useRelativeWalkingSpeed,common.users[a]->debugColors,common.users[a]->debugPositions);
 
             btVector3 pos = player->getWorldTransform().getOrigin();
-            if(playJumpSound)
-                common.playSound("Jump",pos.x(),pos.y(),pos.z(),false);
+            //if(playJumpSound)
+                //common.playSound("Jump",pos.x(),pos.y(),pos.z(),false);
 
             if(fabs(pos.x()) > 10000 || fabs(pos.y()) > 10000 || fabs(pos.z()) > 10000 || isnan(pos.x()) || isnan(pos.y()) || isnan(pos.z()) || isinf(pos.x()) || isinf(pos.y()) || isinf(pos.z()))
             {

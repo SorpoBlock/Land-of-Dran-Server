@@ -549,6 +549,37 @@ void unifiedWorld::playSound(std::string scriptName,float x,float y,float z,bool
     playSound(idx,x,y,z,loop,loopId);
 }
 
+void unifiedWorld::playSoundExcept(std::string scriptName,float x,float y,float z,clientData *except)
+{
+    int idx = -1;
+    for(unsigned int a = 0; a<soundScriptNames.size(); a++)
+    {
+        if(soundScriptNames[a] == scriptName)
+        {
+            idx = a;
+            break;
+        }
+    }
+    if(idx == -1)
+    {
+        error("Could not find sound " + scriptName);
+        return;
+    }
+
+    packet data;
+    data.writeUInt(packetType_playSound,packetTypeBits);
+    data.writeUInt(idx,10);
+    data.writeBit(false);
+    data.writeBit(false);
+    data.writeBit(false);
+    data.writeFloat(x);
+    data.writeFloat(y);
+    data.writeFloat(z);
+    for(int a = 0; a<users.size(); a++)
+        if(users[a] != except)
+            users[a]->netRef->send(&data,true);
+}
+
 void unifiedWorld::setMusic(brick *theBrick,int music)
 {
     if(music <= 0)

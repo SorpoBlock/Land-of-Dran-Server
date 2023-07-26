@@ -189,6 +189,7 @@ struct unifiedWorld
     void addMusicType(std::string scriptName,std::string filePath);
     void addSoundType(std::string scriptName,std::string filePath);
     void playSound(std::string scriptName,float x,float y,float z,bool loop,int loopId = -1);
+    void playSoundExcept(std::string scriptName,float x,float y,float z,clientData *except);
     void playSound(int soundId,float x,float y,float z,bool loop,int loopId = -1,float pitch = 1.0);
     void loopSound(int songId,brickCar *mount,int loopId,float pitch = 1.0);
     void loopSound(std::string scriptName,brickCar *mount,int loopId);
