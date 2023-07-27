@@ -1181,7 +1181,14 @@ bool unifiedWorld::compileBrickCar(brickCar *toAdd,bool wheelsAlready,btVector3 
         }
 
         for(unsigned int a = 0 ; a<toAdd->bricks.size(); a++)
+        {
             toAdd->bricks[a]->carPlatesUp = toAdd->bricks[a]->uPosY - minYPos;
+            //Remove this, testing:
+            /*if(toAdd->bricks[a]->attachedLight)
+            {
+                toAdd->bricks[a]->
+            }*/
+        }
     }
 
     if(steeringWheel)
@@ -1854,6 +1861,422 @@ void unifiedWorld::removeDynamic(dynamic *toRemove,bool dontSendPacket)
         data.writeBit(false); //Removing, not adding
         theServer->send(&data,true);
     }
+}
+
+#define landOfDranBuildMagic 16483534
+
+void unifiedWorld::loadLodSave(std::string filePath)
+{
+    int start = SDL_GetTicks();
+    std::ifstream bls(filePath.c_str(),std::ios::binary);
+
+    if(!bls.is_open())
+    {
+        error("Could not open save file " + filePath);
+        return;
+    }
+    else
+        debug("Opened save file!");
+
+    unsigned int uIntBuf = 0;
+    float floatBuf = 0;
+    unsigned char charBuf = 0;
+
+    bls.read((char*)&uIntBuf,sizeof(unsigned int));
+    if(uIntBuf != landOfDranBuildMagic)
+    {
+        error("Invalid Land of Dran binary save file or outdated version.");
+        bls.close();
+        return;
+    }
+
+    bls.read((char*)&uIntBuf,sizeof(unsigned int));
+    info("Loading " + std::to_string(uIntBuf) + " bricks...");
+
+    bls.read((char*)&uIntBuf,sizeof(unsigned int));
+    int specialBrickTypes = uIntBuf;
+    debug("Save file has " + std::to_string(specialBrickTypes) + " special brick types.");
+
+    std::vector<int> saveToServerBrickTypeIDs;
+
+    for(int a = 0; a<specialBrickTypes; a++)
+    {
+        bls.read((char*)&charBuf,sizeof(unsigned char));
+        if(charBuf == 0)
+        {
+            error("Invalid string length for special brick type in binary save file!");
+            continue;
+        }
+
+        char *dbString = new char[charBuf+1];
+        dbString[charBuf] = 0;
+        bls.read(dbString,charBuf);
+        std::string db = lowercase(dbString);
+
+        bool foundIt = false;
+        for(unsigned int b = 0; b<brickTypes->brickTypes.size(); b++)
+        {
+            std::string dbName = lowercase(getFileFromPath(brickTypes->brickTypes[b]->fileName));
+            if(dbName.length() > 4)
+            {
+                if(dbName.substr(dbName.length()-4,4) == ".blb")
+                    dbName = dbName.substr(0,dbName.length()-4);
+            }
+
+            if(brickTypes->brickTypes[b]->uiname == db)
+            {
+                foundIt = true;
+                saveToServerBrickTypeIDs.push_back(b);
+                break;
+            }
+            else if(dbName == db)
+            {
+                foundIt = true;
+                saveToServerBrickTypeIDs.push_back(b);
+                break;
+            }
+        }
+
+        if(!foundIt)
+        {
+            saveToServerBrickTypeIDs.push_back(-1);
+            error("Could not find brick type with dbName " + db);
+        }
+
+        delete dbString;
+    }
+
+    int brickCount = 0;
+
+    bls.read((char*)&uIntBuf,sizeof(unsigned int));
+    int opaqueBasicBricks = uIntBuf;
+
+    for(int a = 0; a<opaqueBasicBricks; a++)
+    {
+        unsigned char r,g,b,alpha;
+        bls.read((char*)&r,sizeof(unsigned char));
+        bls.read((char*)&g,sizeof(unsigned char));
+        bls.read((char*)&b,sizeof(unsigned char));
+        bls.read((char*)&alpha,sizeof(unsigned char));
+
+        float x,y,z;
+        bls.read((char*)&x,sizeof(float));
+        bls.read((char*)&y,sizeof(float));
+        bls.read((char*)&z,sizeof(float));
+
+        unsigned char width,height,length,flags;
+        bls.read((char*)&width,sizeof(unsigned char));
+        bls.read((char*)&height,sizeof(unsigned char));
+        bls.read((char*)&length,sizeof(unsigned char));
+        bls.read((char*)&flags,sizeof(unsigned char));
+
+        unsigned char angleID,material;
+        bls.read((char*)&angleID,sizeof(unsigned char));
+        bls.read((char*)&material,sizeof(unsigned char));
+
+        if(width == 0 || height == 0 || length == 0)
+        {
+            error("ob Brick had dimension of 0, error in save file? Brick: " + std::to_string(brickCount));
+            continue;
+        }
+
+        if(angleID > 3)
+        {
+            error("ob Brick had angleID of " + std::to_string((int)angleID) + " error in save file? Brick: " + std::to_string(brickCount));
+            continue;
+        }
+
+        if(x < -16000 || x > 16000 || y < - 16000 || y > 16000 || z < -16000 || z > 16000)
+        {
+            error("ob Brick had position of " + std::to_string(x)+","+std::to_string(y)+","+std::to_string(z)+" this is out of bounds! Brick: " + std::to_string(brickCount));
+            continue;
+        }
+
+        brick *tmp = new brick;
+
+        tmp->posX = floor(x);
+        tmp->xHalfPosition = fabs(floor(x) - x) > 0.25;
+
+        float platesHigh = (y/1.2)*3.0;
+        tmp->uPosY = floor(platesHigh);
+        tmp->yHalfPosition = fabs(floor(platesHigh) - platesHigh) > 0.25;
+        tmp->uPosY += 1;
+
+        tmp->posZ = floor(z);
+        tmp->zHalfPosition = fabs(floor(z) - z) > 0.25;
+
+        tmp->r = r;
+        tmp->g = g;
+        tmp->b = b;
+        tmp->a = alpha;
+
+        tmp->r /= 255.0;
+        tmp->g /= 255.0;
+        tmp->b /= 255.0;
+        tmp->a /= 255.0;
+
+        tmp->angleID = angleID;
+        tmp->material = material;
+
+        tmp->width = width;
+        tmp->height = height;
+        tmp->length = length;
+
+        tmp->printMask = flags;
+
+        addBrick(tmp,false,true,false);
+        brickCount++;
+    }
+
+    bls.read((char*)&uIntBuf,sizeof(unsigned int));
+    int transparentBasicBricks = uIntBuf;
+
+    for(int a = 0; a<transparentBasicBricks; a++)
+    {
+        unsigned char r,g,b,alpha;
+        bls.read((char*)&r,sizeof(unsigned char));
+        bls.read((char*)&g,sizeof(unsigned char));
+        bls.read((char*)&b,sizeof(unsigned char));
+        bls.read((char*)&alpha,sizeof(unsigned char));
+
+        float x,y,z;
+        bls.read((char*)&x,sizeof(float));
+        bls.read((char*)&y,sizeof(float));
+        bls.read((char*)&z,sizeof(float));
+
+        unsigned char width,height,length,flags;
+        bls.read((char*)&width,sizeof(unsigned char));
+        bls.read((char*)&height,sizeof(unsigned char));
+        bls.read((char*)&length,sizeof(unsigned char));
+        bls.read((char*)&flags,sizeof(unsigned char));
+
+        unsigned char angleID,material;
+        bls.read((char*)&angleID,sizeof(unsigned char));
+        bls.read((char*)&material,sizeof(unsigned char));
+
+        if(width == 0 || height == 0 || length == 0)
+        {
+            error("tb Brick had dimension of 0, error in save file? Brick: " + std::to_string(brickCount));
+            continue;
+        }
+
+        if(angleID > 3)
+        {
+            error("tb Brick had angleID of " + std::to_string((int)angleID) + " error in save file? Brick: " + std::to_string(brickCount));
+            continue;
+        }
+
+        if(x < -16000 || x > 16000 || y < - 16000 || y > 16000 || z < -16000 || z > 16000)
+        {
+            error("tb Brick had position of " + std::to_string(x)+","+std::to_string(y)+","+std::to_string(z)+" this is out of bounds! Brick: " + std::to_string(brickCount));
+            continue;
+        }
+
+        brick *tmp = new brick;
+
+        tmp->posX = floor(x);
+        tmp->xHalfPosition = fabs(floor(x) - x) > 0.25;
+
+        float platesHigh = (y/1.2)*3.0;
+        tmp->uPosY = floor(platesHigh);
+        tmp->yHalfPosition = fabs(floor(platesHigh) - platesHigh) > 0.25;
+        tmp->uPosY += 1;
+
+        tmp->posZ = floor(z);
+        tmp->zHalfPosition = fabs(floor(z) - z) > 0.25;
+
+        tmp->r = r;
+        tmp->g = g;
+        tmp->b = b;
+        tmp->a = alpha;
+
+        tmp->r /= 255.0;
+        tmp->g /= 255.0;
+        tmp->b /= 255.0;
+        tmp->a /= 255.0;
+
+        tmp->angleID = angleID;
+        tmp->material = material;
+
+        tmp->width = width;
+        tmp->height = height;
+        tmp->length = length;
+
+        tmp->printMask = flags;
+
+        addBrick(tmp,false,true,false);
+        brickCount++;
+    }
+
+    bls.read((char*)&uIntBuf,sizeof(unsigned int));
+    int opaqueSpecialBricks = uIntBuf;
+
+    for(int a = 0; a<opaqueSpecialBricks; a++)
+    {
+        unsigned char r,g,b,alpha;
+        bls.read((char*)&r,sizeof(unsigned char));
+        bls.read((char*)&g,sizeof(unsigned char));
+        bls.read((char*)&b,sizeof(unsigned char));
+        bls.read((char*)&alpha,sizeof(unsigned char));
+
+        float x,y,z;
+        bls.read((char*)&x,sizeof(float));
+        bls.read((char*)&y,sizeof(float));
+        bls.read((char*)&z,sizeof(float));
+
+        unsigned int saveTypeID;
+        bls.read((char*)&saveTypeID,sizeof(unsigned int));
+
+        unsigned char angleID,material;
+        bls.read((char*)&angleID,sizeof(unsigned char));
+        bls.read((char*)&material,sizeof(unsigned char));
+
+        if(saveTypeID >= saveToServerBrickTypeIDs.size())
+        {
+            error("os Brick had save type index of " + std::to_string(saveTypeID)+", error in save file? Brick: " + std::to_string(brickCount));
+            continue;
+        }
+
+        int typeID = saveToServerBrickTypeIDs[saveTypeID];
+
+        //We already logged an error for this while filling out saveToServerBrickTypeIDs
+        if(typeID < 0)
+            continue;
+
+        if(angleID > 3)
+        {
+            error("os Brick had angleID of " + std::to_string((int)angleID) + " error in save file? Brick: " + std::to_string(brickCount));
+            continue;
+        }
+
+        if(x < -16000 || x > 16000 || y < - 16000 || y > 16000 || z < -16000 || z > 16000)
+        {
+            error("os Brick had position of " + std::to_string(x)+","+std::to_string(y)+","+std::to_string(z)+" this is out of bounds! Brick: " + std::to_string(brickCount));
+            continue;
+        }
+
+        brick *tmp = new brick;
+
+        tmp->posX = floor(x);
+        tmp->xHalfPosition = fabs(floor(x) - x) > 0.25;
+
+        float platesHigh = (y/1.2)*3.0;
+        tmp->uPosY = floor(platesHigh);
+        tmp->yHalfPosition = fabs(floor(platesHigh) - platesHigh) > 0.25;
+        tmp->uPosY += 1;
+
+        tmp->posZ = floor(z);
+        tmp->zHalfPosition = fabs(floor(z) - z) > 0.25;
+
+        tmp->r = r;
+        tmp->g = g;
+        tmp->b = b;
+        tmp->a = alpha;
+
+        tmp->r /= 255.0;
+        tmp->g /= 255.0;
+        tmp->b /= 255.0;
+        tmp->a /= 255.0;
+
+        tmp->angleID = angleID;
+        tmp->material = material;
+
+        tmp->typeID = typeID;
+        tmp->isSpecial = true;
+        tmp->width = brickTypes->brickTypes[typeID]->width;
+        tmp->height = brickTypes->brickTypes[typeID]->height;
+        tmp->length = brickTypes->brickTypes[typeID]->length;
+
+        addBrick(tmp,false,true,false);
+        brickCount++;
+    }
+
+
+    bls.read((char*)&uIntBuf,sizeof(unsigned int));
+    int transparentSpecialBricks = uIntBuf;
+
+    for(int a = 0; a<transparentSpecialBricks; a++)
+    {
+        unsigned char r,g,b,alpha;
+        bls.read((char*)&r,sizeof(unsigned char));
+        bls.read((char*)&g,sizeof(unsigned char));
+        bls.read((char*)&b,sizeof(unsigned char));
+        bls.read((char*)&alpha,sizeof(unsigned char));
+
+        float x,y,z;
+        bls.read((char*)&x,sizeof(float));
+        bls.read((char*)&y,sizeof(float));
+        bls.read((char*)&z,sizeof(float));
+
+        unsigned int saveTypeID;
+        bls.read((char*)&saveTypeID,sizeof(unsigned int));
+
+        unsigned char angleID,material;
+        bls.read((char*)&angleID,sizeof(unsigned char));
+        bls.read((char*)&material,sizeof(unsigned char));
+
+        if(saveTypeID >= saveToServerBrickTypeIDs.size())
+        {
+            error("ts Brick had save type index of " + std::to_string(saveTypeID)+", error in save file? Brick: " + std::to_string(brickCount));
+            continue;
+        }
+
+        int typeID = saveToServerBrickTypeIDs[saveTypeID];
+
+        //We already logged an error for this while filling out saveToServerBrickTypeIDs
+        if(typeID < 0)
+            continue;
+
+        if(angleID > 3)
+        {
+            error("ts Brick had angleID of " + std::to_string((int)angleID) + " error in save file? Brick: " + std::to_string(brickCount));
+            continue;
+        }
+
+        if(x < -16000 || x > 16000 || y < - 16000 || y > 16000 || z < -16000 || z > 16000)
+        {
+            error("ts Brick had position of " + std::to_string(x)+","+std::to_string(y)+","+std::to_string(z)+" this is out of bounds! Brick: " + std::to_string(brickCount));
+            continue;
+        }
+
+        brick *tmp = new brick;
+
+        tmp->posX = floor(x);
+        tmp->xHalfPosition = fabs(floor(x) - x) > 0.25;
+
+        float platesHigh = (y/1.2)*3.0;
+        tmp->uPosY = floor(platesHigh);
+        tmp->yHalfPosition = fabs(floor(platesHigh) - platesHigh) > 0.25;
+        tmp->uPosY += 1;
+
+        tmp->posZ = floor(z);
+        tmp->zHalfPosition = fabs(floor(z) - z) > 0.25;
+
+        tmp->r = r;
+        tmp->g = g;
+        tmp->b = b;
+        tmp->a = alpha;
+
+        tmp->r /= 255.0;
+        tmp->g /= 255.0;
+        tmp->b /= 255.0;
+        tmp->a /= 255.0;
+
+        tmp->angleID = angleID;
+        tmp->material = material;
+
+        tmp->typeID = typeID;
+        tmp->isSpecial = true;
+        tmp->width = brickTypes->brickTypes[typeID]->width;
+        tmp->height = brickTypes->brickTypes[typeID]->height;
+        tmp->length = brickTypes->brickTypes[typeID]->length;
+
+        addBrick(tmp,false,true,false);
+        brickCount++;
+    }
+
+    bls.close();
+    info("Loaded " + std::to_string(brickCount) + " bricks in " + std::to_string(SDL_GetTicks()-start) + "ms.");
 }
 
 void unifiedWorld::loadBlocklandSave(std::string filePath)

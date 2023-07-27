@@ -370,6 +370,7 @@ void brick::addToPacket(packet *data,bool fullPos)
 
     if(!fullPos)
     {
+        data->writeBit(body);
         if(printMask != 0 && printID != -1 && printName.length() > 0)
         {
             data->writeBit(true);
@@ -451,7 +452,7 @@ void brickLoader::addPhysicsToBrick(brick *toAdd,btDynamicsWorld *world)
     toAdd->body = new btRigidBody(info);
     toAdd->body->setCollisionFlags( btCollisionObject::CF_STATIC_OBJECT);
     toAdd->body->setFriction(toAdd->material==slippery ? 0.3 : 1.0);
-    toAdd->body->setRestitution(toAdd->material==bob ? 2.1 : 0.0);
+    toAdd->body->setRestitution(toAdd->material==bob ? 2.0 : 0.0);
     toAdd->body->forceActivationState(ISLAND_SLEEPING);
     world->addRigidBody(toAdd->body);
     toAdd->body->setUserPointer(toAdd);

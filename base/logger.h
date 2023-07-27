@@ -9,6 +9,10 @@
 
 namespace syj
 {
+    //Gets the file name and extension from a full file path
+    //e.g. "assets/bob/bob.png" as filepath returns "bob.png"
+    std::string getFileFromPath(std::string in);
+
     //This class is a singleton
     class logger
     {

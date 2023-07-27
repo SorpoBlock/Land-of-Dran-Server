@@ -19,6 +19,17 @@
 
 namespace syj
 {
+    //Gets the file name and extension from a full file path
+    //e.g. "assets/bob/bob.png" as filepath returns "bob.png"
+    std::string getFileFromPath(std::string in)
+    {
+        while(in.find("/") != std::string::npos)
+            in = in.substr(in.find("/")+1,(in.length() - in.find("/"))+1);
+        while(in.find("\\") != std::string::npos)
+            in = in.substr(in.find("\\")+1,(in.length() - in.find("\\"))+1);
+        return in;
+    }
+
     std::function<logger&()> log = logger::get;
     std::function<void(std::string)> debug = logger::debug;
     std::function<void(std::string)> error = logger::error;

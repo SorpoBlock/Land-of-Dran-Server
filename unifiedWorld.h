@@ -229,6 +229,7 @@ struct unifiedWorld
     void setBrickName(brick *theBrick,std::string name);
     bool addBrick(brick *theBrick,bool stopOverlaps = false,bool colliding = true,bool networking = true);
     void loadBlocklandSave(std::string filePath);
+    void loadLodSave(std::string filePath);
 
     void dropItem(dynamic *holder,int slot,bool tryUpdateInventory = true);
     void pickUpItem(dynamic *holder,item *i,int slot,clientData *source=0);

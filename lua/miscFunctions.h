@@ -141,7 +141,7 @@ void saveBricks(std::ofstream &save,std::vector<brick*> &theVector)
     }
 }
 
-static int saveBuildLod(lua_State *L)
+/*static int saveBuildLod(lua_State *L)
 {
     scope("saveBuildLod");
 
@@ -167,7 +167,7 @@ static int saveBuildLod(lua_State *L)
     save.close();
 
     return 0;
-}
+}*/
 
 static int clearAllCars(lua_State *L)
 {
@@ -350,6 +350,55 @@ static int clearAllBricks(lua_State *L)
     return 0;
 }
 
+static int loadLodSave(lua_State *L)
+{
+    scope("loadLodSave");
+
+    const char *fileName = lua_tostring(L,-1);
+    lua_pop(L,1);
+
+    if(!fileName)
+    {
+        error("Invalid string argument!");
+        return 0;
+    }
+
+    common_lua->loadLodSave(fileName);
+
+    packet skipCompileData;
+    skipCompileData.writeUInt(packetType_skipBricksCompile,packetTypeBits);
+    skipCompileData.writeUInt(common_lua->bricks.size(),24);
+    common_lua->theServer->send(&skipCompileData,true);
+
+    int bricksToSend = common_lua->bricks.size();
+    int bricksSentSoFar = 0;
+    while(bricksToSend > 0)
+    {
+        int sentThisTime = 0;
+        int bitsLeft = packetMTUbits - (packetTypeBits + 8);
+        while(bitsLeft > 0 && (sentThisTime < bricksToSend))
+        {
+            brick *tmp = common_lua->bricks[sentThisTime + bricksSentSoFar];
+            bitsLeft -= tmp->getPacketBits();
+            sentThisTime++;
+        }
+
+        packet data;
+        data.writeUInt(packetType_addBricks,packetTypeBits);
+        data.writeUInt(sentThisTime,8);
+        for(int a = bricksSentSoFar; a<bricksSentSoFar+sentThisTime; a++)
+            common_lua->bricks[a]->addToPacket(&data);
+
+        //std::cout<<"In packet: "<<sentThisTime<<" "<<data.getStreamPos()<<"\n";
+        common_lua->theServer->send(&data,true);
+
+        bricksToSend -= sentThisTime;
+        bricksSentSoFar += sentThisTime;
+    }
+
+    return 0;
+}
+
 static int loadBlocklandSave(lua_State *L)
 {
     scope("loadBlocklandSave");
@@ -403,7 +452,7 @@ void bindMiscFuncs(lua_State *L)
 {
     lua_register(L,"echo",LUAecho);
     lua_register(L,"relWalkSpeed",relWalkSpeed);
-    lua_register(L,"saveBuildLod",saveBuildLod);
+    //lua_register(L,"saveBuildLod",saveBuildLod);
     lua_register(L,"playSound",playSound);
     lua_register(L,"clearAllCars",clearAllCars);
     lua_register(L,"bottomPrintAll",bottomPrintAll);
@@ -411,6 +460,7 @@ void bindMiscFuncs(lua_State *L)
     lua_register(L,"messageAll",messageAll);
     lua_register(L,"clearAllBricks",clearAllBricks);
     lua_register(L,"loadBlocklandSave",loadBlocklandSave);
+    lua_register(L,"loadLodSave",loadLodSave);
 }
 
 #endif // MISCFUNCTIONS_H_INCLUDED

@@ -17,13 +17,13 @@ struct wheelData
 
     float breakForce = 400;
     float steerAngle = 0.5;
-    float engineForce = 100;
+    float engineForce = 200;
     float suspensionLength = 0.7;
     float suspensionStiffness = 100;
     float dampingCompression = 6;
     float dampingRelaxation = 10;
     float frictionSlip = 1.2;
-    float rollInfluence = 1.0;
+    float rollInfluence = 0.6;
     int brickTypeID = 0;
 
     /*std::string oldBrickDatablockName;

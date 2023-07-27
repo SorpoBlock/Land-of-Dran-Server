@@ -113,17 +113,6 @@ aiMatrix4x4 getCollisionTransformMatrix(const aiScene *scene,aiNode *node,aiMatr
     return aiMatrix4x4();
 }
 
-//Gets the file name and extension from a full file path
-//e.g. "assets/bob/bob.png" as filepath returns "bob.png"
-std::string getFileFromPath(std::string in)
-{
-    while(in.find("/") != std::string::npos)
-        in = in.substr(in.find("/")+1,(in.length() - in.find("/"))+1);
-    while(in.find("\\") != std::string::npos)
-        in = in.substr(in.find("\\")+1,(in.length() - in.find("\\"))+1);
-    return in;
-}
-
 //Gets the folder from a full file path
 //e.g. "assets/bob/bob.png" as filepath returns "assets/bob/"
 std::string getFolderFromPath(std::string in)
