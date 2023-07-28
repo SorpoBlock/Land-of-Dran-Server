@@ -149,7 +149,8 @@ void clientDrewSelection(btVector3 start,btVector3 end,unifiedWorld *common,clie
         }
         else
         {
-            if(!common->compileBrickCar(car))
+            float dummyHeightCorrection;
+            if(!common->compileBrickCar(car,dummyHeightCorrection))
             {
                 source->bottomPrint("Wheels must face the same direction, and you need *one* steering wheel!",5000);
                 for(unsigned int a = 0; a<car->bricks.size(); a++)

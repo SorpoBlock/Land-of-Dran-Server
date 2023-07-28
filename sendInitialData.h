@@ -68,6 +68,7 @@ void sendInitialDataSecondHalf(unifiedWorld *common,clientData *source,serverCli
 
     packet skipCompileData;
     skipCompileData.writeUInt(packetType_skipBricksCompile,packetTypeBits);
+    skipCompileData.writeBit(false); //This is not a clear all bricks packet
     skipCompileData.writeUInt(common->bricks.size(),24);
     client->send(&skipCompileData,true);
 

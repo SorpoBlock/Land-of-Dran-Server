@@ -247,7 +247,7 @@ struct unifiedWorld
     }
 
     //Returns false if wheels have different rotations
-    bool compileBrickCar(brickCar *toAdd,bool wheelsAlready = false,btVector3 origin = btVector3(0,0,0));
+    bool compileBrickCar(brickCar *toAdd,float &heightCorrection,bool wheelsAlready = false,btVector3 origin = btVector3(0,0,0));
     void removeBrickCar(brickCar *toRemove);
 
     void messageAll(std::string text,std::string category = "generic");

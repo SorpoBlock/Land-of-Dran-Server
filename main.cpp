@@ -283,8 +283,8 @@ int main(int argc, char *argv[])
         {
             float fps = frames;
             fps /= 10.0;
-            if(fps < 10000)
-                info("Last FPS: " + std::to_string(fps));
+            //if(fps < 10000)
+              //  info("Last FPS: " + std::to_string(fps));
             frames = 0;
             lastFrameCheck = SDL_GetTicks();
         }

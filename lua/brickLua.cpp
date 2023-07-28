@@ -364,9 +364,15 @@ static int setBrickColliding(lua_State *L)
         return 0;
     }
 
+    if(!passedBrick->body)
+    {
+        error("Brick missing body!");
+        return 0;
+    }
+
     //std::cout<<"Setting brick collision..."<<passedBrick<<" "<<passedBrick->serverID<<"\n";
 
-    if(passedBrick->body && !colliding)
+    /*if(passedBrick->body && !colliding)
     {
         //std::cout<<"Removing body...\n";
         common_lua->physicsWorld->removeRigidBody(passedBrick->body);
@@ -383,7 +389,13 @@ static int setBrickColliding(lua_State *L)
         packet update;
         passedBrick->createUpdatePacket(&update);
         common_lua->theServer->send(&update,true);
-    }
+    }*/
+
+    passedBrick->setColliding(common_lua->physicsWorld,colliding);
+
+    packet update;
+    passedBrick->createUpdatePacket(&update);
+    common_lua->theServer->send(&update,true);
 
     return 0;
 }

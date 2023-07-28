@@ -83,6 +83,31 @@ struct brick
     int builtBy = -1;
     int serverID;
 
+    bool collides = true;
+
+    const bool isColliding()
+    {
+        return collides;
+    }
+
+    void setColliding(btDynamicsWorld *world,bool colliding)
+    {
+        if(!body)
+            return;
+
+        collides = colliding;
+        if(colliding)
+        {
+            world->removeRigidBody(body);
+            world->addRigidBody(body);
+        }
+        else
+        {
+            world->removeRigidBody(body);
+            world->addRigidBody(body,int(btBroadphaseProxy::SensorTrigger),int(btBroadphaseProxy::SensorTrigger));
+        }
+    }
+
     //For all bricks:
     int material;
 

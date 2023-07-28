@@ -102,6 +102,7 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                     t.setOrigin(btVector3(x,y,z));
                     source->driving->body->setWorldTransform(t);
                     source->driving->body->setLinearVelocity(btVector3(0,0,0));
+                    source->driving->body->activate();
                 }
             }
             else if(!source->adminOrb) //start admin orb
@@ -282,6 +283,7 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                     }
                     else //light
                     {
+
                         source->loadingCarLights.clear();
 
                         source->loadedCarLights = true;
@@ -433,10 +435,13 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
 
                     if(source->loadCarAsCar)
                     {
-                        common->compileBrickCar(source->loadingCar,true,source->loadedCarOrigin);
+                        float heightCorrection = 0;
+                        common->compileBrickCar(source->loadingCar,heightCorrection,true,source->loadedCarOrigin);
                         for(int a = 0; a<source->loadingCarLights.size(); a++)
                         {
                             source->loadingCarLights[a]->attachedCar = source->loadingCar;
+                            source->loadingCarLights[a]->offset.setY(source->loadingCarLights[a]->offset.y()-heightCorrection);
+                            source->loadingCar->lights.push_back(source->loadingCarLights[a]);
                             for(int b = 0; b<common->users.size(); b++)
                                 source->loadingCarLights[a]->sendToClient(common->users[b]->netRef);
                         }
@@ -475,8 +480,8 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                         }
                     }
 
-                    for(int a = 0; a<source->loadingCarLights.size(); a++)
-                        delete source->loadingCarLights[a];
+                    //for(int a = 0; a<source->loadingCarLights.size(); a++)
+                        //delete source->loadingCarLights[a];
                     source->loadingCarLights.clear();
                 }
                 else
@@ -657,14 +662,13 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                     common->removeLight(source->lastWrenchedBrick->attachedLight);
             }
 
-            std::cout<<"Setting "<<source->lastWrenchedBrick<<" music to "<<music<<"\n";
             common->setMusic(source->lastWrenchedBrick,music);
 
             if(!source->lastWrenchedBrick->car)
             {
                 common->setBrickName(source->lastWrenchedBrick,name);
 
-                if(source->lastWrenchedBrick->body && !colliding)
+                /*if(source->lastWrenchedBrick->body && !colliding)
                 {
                     common->physicsWorld->removeRigidBody(source->lastWrenchedBrick->body);
                     delete source->lastWrenchedBrick->body;
@@ -676,6 +680,16 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                 else if(source->lastWrenchedBrick->body == 0 && colliding)
                 {
                     common->brickTypes->addPhysicsToBrick(source->lastWrenchedBrick,common->physicsWorld);
+                    packet update;
+                    source->lastWrenchedBrick->createUpdatePacket(&update);
+                    common->theServer->send(&update,true);
+                }*/
+
+
+                if(colliding != source->lastWrenchedBrick->isColliding())
+                {
+                    source->lastWrenchedBrick->setColliding(common->physicsWorld,colliding);
+
                     packet update;
                     source->lastWrenchedBrick->createUpdatePacket(&update);
                     common->theServer->send(&update,true);
@@ -961,10 +975,8 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
         }
         case undoBrick:
         {
-            std::cout<<"Undo request, client: "<<source->name<<" size: "<<source->undoList.size()<<"\n";
             if(source->undoList.size() > 0)
             {
-                std::cout<<"Last brick id: "<<source->undoList[source->undoList.size()-1]<<"\n";
                 int id = source->undoList[source->undoList.size()-1];
                 source->undoList.pop_back();
                 for(unsigned int a = 0; a<source->ownedBricks.size(); a++)
@@ -1345,6 +1357,8 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                                 btVector3 raystart = source->controlling->getWorldTransform().getOrigin() + btVector3(source->controlling->type->eyeOffsetX,source->controlling->type->eyeOffsetY,source->controlling->type->eyeOffsetZ);
                                 btVector3 rayend = raystart + btVector3(camDirX,camDirY,camDirZ) * 30.0;
                                 btCollisionWorld::ClosestRayResultCallback res(raystart,rayend);
+                                res.m_collisionFilterGroup = btBroadphaseProxy::AllFilter;
+                                res.m_collisionFilterMask = btBroadphaseProxy::AllFilter;
                                 common->physicsWorld->rayTest(raystart,rayend,res);
 
                                 common->addEmitter(common->getEmitterType("wrenchExplosionEmitter"),res.m_hitPointWorld.x(),res.m_hitPointWorld.y(),res.m_hitPointWorld.z());

@@ -252,7 +252,51 @@ static int messageAll(lua_State *L)
 
 static int clearAllBricks(lua_State *L)
 {
-    int bricksToRemove = common_lua->bricks.size();
+    packet clearAllBricksPacket;
+    clearAllBricksPacket.writeUInt(packetType_skipBricksCompile,packetTypeBits);
+    clearAllBricksPacket.writeBit(true); //This is a clear all bricks packet!
+    common_lua->theServer->send(&clearAllBricksPacket,true);
+
+    for(int a = 0; a<common_lua->bricks.size(); a++)
+    {
+       brick *theBrick = common_lua->bricks[a];
+
+        if(!theBrick)
+            return 0;
+
+        if(theBrick->attachedLight)
+        {
+            common_lua->removeLight(theBrick->attachedLight);
+            theBrick->attachedLight = 0;
+        }
+
+        if(theBrick->music > 0)
+            common_lua->setMusic(theBrick,0);
+
+        if(theBrick->body)
+        {
+            common_lua->physicsWorld->removeRigidBody(theBrick->body);
+            delete theBrick->body;
+            theBrick->body = 0;
+        }
+
+        delete theBrick;
+    }
+
+    for(int a = 0; a<common_lua->users.size(); a++)
+        common_lua->users[a]->ownedBricks.clear();
+
+    common_lua->bricks.clear();
+
+    for(int a = 0; a<common_lua->namedBricks.size(); a++)
+        common_lua->namedBricks[a].bricks.clear();
+    common_lua->namedBricks.clear();
+
+    delete common_lua->tree;
+    common_lua->tree = new Octree<brick*>(brickTreeSize*2,0);
+    common_lua->tree->setEmptyValue(0);
+
+    /*int bricksToRemove = common_lua->bricks.size();
     unsigned int bricksRemoved = 0;
 
     if(bricksToRemove == 0)
@@ -347,7 +391,7 @@ static int clearAllBricks(lua_State *L)
         common_lua->namedBricks[a].bricks.clear();
     common_lua->namedBricks.clear();
 
-    return 0;
+    return 0;*/
 }
 
 static int loadLodSave(lua_State *L)
@@ -367,6 +411,7 @@ static int loadLodSave(lua_State *L)
 
     packet skipCompileData;
     skipCompileData.writeUInt(packetType_skipBricksCompile,packetTypeBits);
+    skipCompileData.writeBit(false); //This is not a clear all bricks packet
     skipCompileData.writeUInt(common_lua->bricks.size(),24);
     common_lua->theServer->send(&skipCompileData,true);
 
@@ -416,6 +461,7 @@ static int loadBlocklandSave(lua_State *L)
 
     packet skipCompileData;
     skipCompileData.writeUInt(packetType_skipBricksCompile,packetTypeBits);
+    skipCompileData.writeBit(false); //This is not a clear all bricks packet
     skipCompileData.writeUInt(common_lua->bricks.size(),24);
     common_lua->theServer->send(&skipCompileData,true);
 

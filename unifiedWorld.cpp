@@ -95,8 +95,6 @@ light *unifiedWorld::addLight(btVector3 color,brickCar *attachedCar,btVector3 of
     l->attachedCar = attachedCar;
     attachedCar->lights.push_back(l);
 
-    std::cout<<"Adding car light!\n";
-
     if(!forgoSending)
     {
         for(int a = 0; a<users.size(); a++)
@@ -909,7 +907,7 @@ void unifiedWorld::removeBrickCar(brickCar *toRemove)
     delete toRemove;
 }
 
-bool unifiedWorld::compileBrickCar(brickCar *toAdd,bool wheelsAlready,btVector3 origin)
+bool unifiedWorld::compileBrickCar(brickCar *toAdd,float &heightCorrection,bool wheelsAlready,btVector3 origin)
 {
     toAdd->serverID = lastBuiltVehicleID;
     lastBuiltVehicleID++;
@@ -920,6 +918,8 @@ bool unifiedWorld::compileBrickCar(brickCar *toAdd,bool wheelsAlready,btVector3 
     bool confirmedOddRotation = false;
 
     brick *steeringWheel = 0;
+
+    std::vector<light*> lightsToShiftUp;
 
     if(!wheelsAlready)
     {
@@ -1125,9 +1125,9 @@ bool unifiedWorld::compileBrickCar(brickCar *toAdd,bool wheelsAlready,btVector3 
                 light *l = addLight(tmp->attachedLight->color,toAdd,btVector3(tmp->carX,tmp->carY,tmp->carZ),true);
                 l->isSpotlight = tmp->attachedLight->isSpotlight;
                 l->direction = tmp->attachedLight->direction;
-                for(int z=0;z<users.size(); z++)
-                    l->sendToClient(users[z]->netRef);
-                std::cout<<(l->isSpotlight ? "Car light is spotlight" : "Car light is not spotlight")<<"\n";
+                lightsToShiftUp.push_back(l);
+                //for(int z=0;z<users.size(); z++)
+                    //l->sendToClient(users[z]->netRef);
                 removeLight(tmp->attachedLight);
             }
         }
@@ -1181,14 +1181,7 @@ bool unifiedWorld::compileBrickCar(brickCar *toAdd,bool wheelsAlready,btVector3 
         }
 
         for(unsigned int a = 0 ; a<toAdd->bricks.size(); a++)
-        {
             toAdd->bricks[a]->carPlatesUp = toAdd->bricks[a]->uPosY - minYPos;
-            //Remove this, testing:
-            /*if(toAdd->bricks[a]->attachedLight)
-            {
-                toAdd->bricks[a]->
-            }*/
-        }
     }
 
     if(steeringWheel)
@@ -1209,9 +1202,16 @@ bool unifiedWorld::compileBrickCar(brickCar *toAdd,bool wheelsAlready,btVector3 
     }
     totalBrickY /= ((double)toAdd->bricks.size());
 
-    float heightCorrection = (totalWheelY - totalBrickY) + 0.4;
+    heightCorrection = (totalWheelY - totalBrickY) + 0.4;
     if(vehiclePrefs.realisticCenterOfMass)
         heightCorrection = 0;
+
+    for(unsigned int a = 0; a<lightsToShiftUp.size(); a++)
+    {
+        lightsToShiftUp[a]->offset.setY(lightsToShiftUp[a]->offset.y()+heightCorrection);
+        for(int z=0;z<users.size(); z++)
+            lightsToShiftUp[a]->sendToClient(users[z]->netRef);
+    }
 
     for(int a = 0; a<toAdd->bricks.size(); a++)
         toAdd->bricks[a]->carY -= heightCorrection;
@@ -1285,8 +1285,6 @@ bool unifiedWorld::compileBrickCar(brickCar *toAdd,bool wheelsAlready,btVector3 
         float mass = vehiclePrefs.mass;
         wholeShape->calculateLocalInertia(mass,inertia);
     }*/
-
-    std::cout<<"Intertia: "<<inertia.x()<<","<<inertia.y()<<","<<inertia.z()<<"\n";
 
 
     //toAdd->halfExtents = btVector3(sizeX/2.0,sizeY/2.0,sizeZ/2.0);
@@ -1535,10 +1533,14 @@ bool unifiedWorld::addBrick(brick *theBrick,bool stopOverlaps,bool colliding,boo
         }
     }
 
-    if(colliding)
+    /*if(colliding)
         brickTypes->addPhysicsToBrick(theBrick,physicsWorld);
     else
-        theBrick->body = 0;
+        theBrick->body = 0;*/
+    brickTypes->addPhysicsToBrick(theBrick,physicsWorld);
+    if(!colliding)
+        theBrick->setColliding(physicsWorld,false);
+
     bricks.push_back(theBrick);
 
     if(networking)

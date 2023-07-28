@@ -75,7 +75,7 @@ void brick::createUpdatePacket(packet *data)
     }
     data->writeUInt(shapeFx,4);
     data->writeUInt(tmpMat,4);
-    data->writeBit(body);
+    data->writeBit(isColliding());
 }
 
 void sayVec(btVector3 in)
@@ -370,7 +370,7 @@ void brick::addToPacket(packet *data,bool fullPos)
 
     if(!fullPos)
     {
-        data->writeBit(body);
+        data->writeBit(isColliding());
         if(printMask != 0 && printID != -1 && printName.length() > 0)
         {
             data->writeBit(true);
