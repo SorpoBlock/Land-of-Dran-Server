@@ -7,7 +7,7 @@ void clientData::forceTransformUpdate()
 
     packet forceTransform;
     forceTransform.writeUInt(packetType_clientPhysicsData,packetTypeBits);
-    forceTransform.writeUInt(3,2);
+    forceTransform.writeUInt(3,2); //subtype three, force transform update (obvious lol)
 
     btTransform t = controlling->getWorldTransform();
 
@@ -33,14 +33,14 @@ void clientData::setControlling(dynamic *player)
     {
         packet removePhysicsData;
         removePhysicsData.writeUInt(packetType_clientPhysicsData,packetTypeBits);
-        removePhysicsData.writeUInt(2,2);
+        removePhysicsData.writeUInt(2,2); //subtype 2, delete client physics object (for old player if it exists)
         netRef->send(&removePhysicsData,true);
         return;
     }
 
     packet physicsData;
     physicsData.writeUInt(packetType_clientPhysicsData,packetTypeBits);
-    physicsData.writeUInt(0,2); //subtype, creating physics for a client to control
+    physicsData.writeUInt(0,2); //subtype 0, creating physics for a client to control
     physicsData.writeUInt(player->serverID,dynamicObjectIDBits);
     physicsData.writeFloat(player->type->finalHalfExtents.x());
     physicsData.writeFloat(player->type->finalHalfExtents.y());
@@ -48,6 +48,9 @@ void clientData::setControlling(dynamic *player)
     physicsData.writeFloat(player->type->finalOffset.x());
     physicsData.writeFloat(player->type->finalOffset.y());
     physicsData.writeFloat(player->type->finalOffset.z());
+    physicsData.writeFloat(player->getWorldTransform().getOrigin().x());
+    physicsData.writeFloat(player->getWorldTransform().getOrigin().y());
+    physicsData.writeFloat(player->getWorldTransform().getOrigin().z());
 
     netRef->send(&physicsData,true);
 }

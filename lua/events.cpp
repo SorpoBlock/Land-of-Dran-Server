@@ -728,6 +728,7 @@ void unifiedWorld::spawnPlayer(clientData *source,float x,float y,float z)
         dynamic *theirPlayer = addDynamic(0,source->preferredRed,source->preferredGreen,source->preferredBlue);
 
         btTransform t;
+        t.setIdentity();
         t.setOrigin(btVector3(x,y,z));
         theirPlayer->setWorldTransform(t);
         theirPlayer->makePlayer();
@@ -747,6 +748,7 @@ void unifiedWorld::spawnPlayer(clientData *source,float x,float y,float z)
         common_lua->pickUpItem(source->controlling,hammer,1,source);
 
         theirPlayer->setLinearVelocity(btVector3(0,0,0));
+        theirPlayer->setAngularVelocity(btVector3(0,0,0));
 
         common_lua->applyAppearancePrefs(source,theirPlayer);
     }

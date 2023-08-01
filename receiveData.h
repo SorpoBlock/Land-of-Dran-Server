@@ -766,7 +766,6 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                     btVector3 o = t.getOrigin();
                     o.setY(o.getY() + source->driving->halfExtents.y() + 0.1);
                     t.setOrigin(o);
-                    std::cout<<"Putting player at: "<<o.x()<<","<<o.y()<<","<<o.z()<<"\n";
                     source->controlling->setWorldTransform(t);
                     source->controlling->setLinearVelocity(source->driving->body->getLinearVelocity());
                     source->controlling->setAngularVelocity(btVector3(0,0,0));
@@ -862,7 +861,7 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
 
                         packet giveUpPlayerControl;
                         giveUpPlayerControl.writeUInt(packetType_clientPhysicsData,packetTypeBits);
-                        giveUpPlayerControl.writeUInt(1,2);
+                        giveUpPlayerControl.writeUInt(1,2); //subtype 1, resume client physics control
                         client->send(&giveUpPlayerControl,true);
 
                         //source->cameraTarget = car->body;
@@ -938,6 +937,8 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                     error("[colour='FFFF0000']" + err);
                 }
             }
+
+
             return;
         }
         case evalPassword:

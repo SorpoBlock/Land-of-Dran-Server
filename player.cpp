@@ -513,6 +513,12 @@ bool dynamic::control(float yaw,bool forward,bool backward,bool left,bool right,
     }
 
     int deltaMS = SDL_GetTicks() - lastPlayerControl;
+
+    if(deltaMS > 60)
+        deltaMS = 60;
+    if(deltaMS < 0)
+        deltaMS = 0;
+
     lastPlayerControl = SDL_GetTicks();
 
     if(jump && ground && getLinearVelocity().y() < 1)
