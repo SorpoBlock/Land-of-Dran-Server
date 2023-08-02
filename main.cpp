@@ -355,6 +355,32 @@ int main(int argc, char *argv[])
 
         for(unsigned int a = 0; a<common.users.size(); a++)
         {
+            //Check for partially loaded cars to purge:
+            if(common.users[a]->loadingCar)
+            {
+                if(SDL_GetTicks() - common.users[a]->carLoadStartTime > 10000)
+                {
+                    info("User: " + common.users[a]->name + " has a partially loaded car that will now be deleted.");
+
+                    for(int b = 0; b<common.users[a]->loadingCarLights.size(); b++)
+                        delete common.users[a]->loadingCarLights[b];
+                    common.users[a]->loadingCarLights.clear();
+                    for(int b = 0; b<common.users[a]->loadingCar->bricks.size(); b++)
+                        delete common.users[a]->loadingCar->bricks[b];
+                    common.users[a]->loadingCar->bricks.clear();
+
+                    delete common.users[a]->loadingCar;
+                    common.users[a]->loadingCar = 0;
+
+                    common.users[a]->basicBricksLeftToLoad = 0;
+                    common.users[a]->specialBricksLeftToLoad = 0;
+                    common.users[a]->loadedCarAmountsPacket = false;
+                    common.users[a]->loadedCarLights = false;
+                    common.users[a]->loadedCarWheels = false;
+                }
+            }
+
+
             if(!common.users[a]->controlling)
                 continue;
 

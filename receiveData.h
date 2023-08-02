@@ -196,126 +196,111 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
             if(!source->loadingCar)
                 source->loadingCar = new brickCar;
 
+            //Main loop will clear out partial loads after a while:
+            source->carLoadStartTime = SDL_GetTicks();
+
             source->loadingCar->ownerID = source->playerID;
 
+            int packetSubType = data->readUInt(3);
+            std::cout<<"\nPacket sub type: "<<packetSubType<<"\n";
 
-            if(data->readBit())
+            switch(packetSubType)
             {
-                //brick data
-                if(data->readBit())
+                case 0: //Amounts and settings
                 {
-                    if(data->readBit()) //special bricks
-                    {
-                        int toRead = data->readUInt(8);
-                        for(unsigned int i = 0; i<toRead; i++)
-                        {
-                            int typeID = data->readUInt(10);
-
-                            if(typeID < 0 || typeID >= common->brickTypes->brickTypes.size())
-                            {
-                                error("Invalid typeID " + std::to_string(typeID) + " on special brick carPlant request.");
-                                break;
-                            }
-
-                            //special brick data
-                            brick *tmp = 0;
-                            if(common->brickTypes->brickTypes[typeID]->uiname.find("steering") != std::string::npos)
-                            {
-                                tmp = new steeringBrick;
-                                tmp->isSteeringWheel = true;
-                                tmp->isWheel = false;
-                            }
-                            else if(common->brickTypes->brickTypes[typeID]->uiname.find("vert wheel") != std::string::npos)
-                            {
-                                tmp = new wheelBrick;
-                                tmp->isWheel = true;
-                                tmp->isSteeringWheel = false;
-                                ((wheelBrick*)tmp)->loadOrder = source->carWheelsMadeSoFar;
-                                source->carWheelsMadeSoFar++;
-                            }
-                            else
-                            {
-                                tmp = new brick;
-                                tmp->isSteeringWheel = false;
-                                tmp->isWheel = false;
-                            }
-
-                            tmp->isSpecial = true;
-                            tmp->typeID = typeID;
-                            tmp->width = common->brickTypes->brickTypes[typeID]->width;
-                            tmp->length = common->brickTypes->brickTypes[typeID]->length;
-                            tmp->height = common->brickTypes->brickTypes[typeID]->height;
-
-                            tmp->material = 0;
-
-                            tmp->carX = data->readFloat();
-                            tmp->carY = data->readFloat();
-                            tmp->carPlatesUp = data->readUInt(10);
-                            tmp->yHalfPosition = data->readBit();
-                            tmp->carZ = data->readFloat();
-
-                            tmp->isSpecial = true;
-                            tmp->angleID = data->readUInt(2);
-                            int shapeFx = data->readUInt(4);
-                            int material = data->readUInt(4);
-                            if(shapeFx == 1)
-                                material += 1000;
-                            else if(shapeFx == 2)
-                                material += 2000;
-                            tmp->material = material;
-
-                            tmp->r = data->readUInt(8);
-                            tmp->r /= 255.0;
-                            tmp->g = data->readUInt(8);
-                            tmp->g /= 255.0;
-                            tmp->b = data->readUInt(8);
-                            tmp->b /= 255.0;
-                            tmp->a = data->readUInt(8);
-                            tmp->a /= 255.0;
-
-                            if(tmp->width <= 0 || tmp->width >= 255 || tmp->height <= 0 || tmp->height >= 255 || tmp->length <= 0 || tmp->length >= 255)
-                                break;
-
-                            tmp->builtBy = source->playerID;
-                            source->loadingCar->bricks.push_back(tmp);
-                        }
-                        source->loadedCarSpecial = true;
-                    }
-                    else //light
-                    {
-
-                        source->loadingCarLights.clear();
-
-                        source->loadedCarLights = true;
-
-                        int howMany = data->readUInt(8);
-                        for(int a = 0; a<howMany; a++)
-                        {
-                            float r = data->readFloat();
-                            float g = data->readFloat();
-                            float b = data->readFloat();
-
-                            light *l = common->addLight(btVector3(r,g,b),btVector3(0,0,0),true);
-                            l->offset.setX(data->readFloat());
-                            l->offset.setY(data->readFloat());
-                            l->offset.setZ(data->readFloat());
-
-                            l->isSpotlight = data->readBit();
-                            if(l->isSpotlight)
-                            {
-                                l->direction.setX(data->readFloat());
-                                l->direction.setY(data->readFloat());
-                                l->direction.setZ(data->readFloat());
-                                l->direction.setW(acos(data->readFloat()));
-                            }
-
-                            source->loadingCarLights.push_back(l);
-                        }
-                    }
+                    source->basicBricksLeftToLoad += data->readUInt(10);
+                    source->specialBricksLeftToLoad += data->readUInt(10);
+                    data->readUInt(6); //How many lights, redundant atm
+                    data->readUInt(6); //How many wheels, redundant atm
+                    source->loadCarAsCar = data->readBit();
+                    source->loadedCarOrigin.setX(data->readFloat());
+                    source->loadedCarOrigin.setY(data->readFloat());
+                    source->loadedCarOrigin.setZ(data->readFloat());
+                    source->loadedCarAmountsPacket = true;
+                    break;
                 }
-                else
+                case 1: //Lights
                 {
-                    int toRead = data->readUInt(8);
+                    source->loadingCarLights.clear();
+
+                    source->loadedCarLights = true;
+
+                    int howMany = data->readUInt(8);
+                    for(int a = 0; a<howMany; a++)
+                    {
+                        float r = data->readFloat();
+                        float g = data->readFloat();
+                        float b = data->readFloat();
+
+                        light *l = common->addLight(btVector3(r,g,b),btVector3(0,0,0),true);
+                        l->offset.setX(data->readFloat());
+                        l->offset.setY(data->readFloat());
+                        l->offset.setZ(data->readFloat());
+
+                        l->isSpotlight = data->readBit();
+                        if(l->isSpotlight)
+                        {
+                            l->direction.setX(data->readFloat());
+                            l->direction.setY(data->readFloat());
+                            l->direction.setZ(data->readFloat());
+                            l->direction.setW(acos(data->readFloat()));
+                        }
+
+                        source->loadingCarLights.push_back(l);
+                    }
+
+                    break;
+                }
+                case 2: //Wheels
+                {
+                    source->loadedCarWheels = true;
+
+                    int toRead = data->readUInt(5);
+                    for(unsigned int i = 0; i<toRead; i++)
+                    {
+                        //wheel data
+                        wheelData wheel;
+                        wheel.loadOrder = source->totalLoadedWheels;
+                        source->totalLoadedWheels++;
+                        float scale = data->readFloat();
+                        wheel.scale = btVector3(scale,scale,scale);
+                        wheel.wheelAxleCS = btVector3(-1, 0, 0); //change for rotated cars
+                        float carX = data->readFloat();
+                        float carY = data->readFloat();
+                        float carZ = data->readFloat();
+                        wheel.carX = carX;
+                        wheel.carY = carY;
+                        wheel.carZ = carZ;
+                        wheel.offset = btVector3(carX,carY,carZ);
+                        wheel.breakForce = data->readFloat();
+                        wheel.steerAngle = data->readFloat();
+                        wheel.engineForce = data->readFloat();
+                        wheel.suspensionLength = data->readFloat();
+                        wheel.suspensionStiffness = data->readFloat();
+                        wheel.dampingCompression = data->readFloat();
+                        wheel.dampingRelaxation = data->readFloat();
+                        wheel.frictionSlip = data->readFloat();
+                        wheel.rollInfluence = data->readFloat();
+                        int typeID = data->readUInt(10);
+                        wheel.brickTypeID = 0;
+                        if(typeID < 0 || typeID >= common->brickTypes->brickTypes.size())
+                            error("Invalid typeID " + std::to_string(typeID) + " on special brick carPlant request.");
+                        else
+                        {
+                            if(common->brickTypes->brickTypes[typeID]->uiname.find("vert wheel") == std::string::npos)
+                                error("Wheel brick data type from loaded car is not wheel?");
+                            else
+                                wheel.brickTypeID = typeID;
+                        }
+
+                        source->loadingCar->wheels.push_back(wheel);
+                    }
+
+                    break;
+                }
+                case 3: //Basic bricks
+                {
+                    int toRead = data->readUInt(6);
                     for(unsigned int i = 0; i<toRead; i++)
                     {
                         //basic brick data
@@ -352,150 +337,202 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                         tmp->builtBy = source->playerID;
                         source->loadingCar->bricks.push_back(tmp);
                     }
-                    source->loadedCarBasic = true;
-                }
-            }
-            else
-            {
-                source->loadCarAsCar = data->readBit();
 
-                float ox = data->readFloat();
-                float oy = data->readFloat();
-                float oz = data->readFloat();
-                source->loadedCarOrigin = btVector3(ox,oy,oz);
-                int toRead = data->readUInt(5);
-                for(unsigned int i = 0; i<toRead; i++)
+                    source->basicBricksLeftToLoad -= toRead;
+
+                    break;
+                }
+                case 4: //Special bricks
                 {
-                    //wheel data
-                    wheelData wheel;
-                    wheel.loadOrder = source->totalLoadedWheels;
-                    source->totalLoadedWheels++;
-                    float scale = data->readFloat();
-                    wheel.scale = btVector3(scale,scale,scale);
-                    wheel.wheelAxleCS = btVector3(-1, 0, 0); //change for rotated cars
-                    float carX = data->readFloat();
-                    float carY = data->readFloat();
-                    float carZ = data->readFloat();
-                    wheel.carX = carX;
-                    wheel.carY = carY;
-                    wheel.carZ = carZ;
-                    wheel.offset = btVector3(carX,carY,carZ);
-                    wheel.breakForce = data->readFloat();
-                    wheel.steerAngle = data->readFloat();
-                    wheel.engineForce = data->readFloat();
-                    wheel.suspensionLength = data->readFloat();
-                    wheel.suspensionStiffness = data->readFloat();
-                    wheel.dampingCompression = data->readFloat();
-                    wheel.dampingRelaxation = data->readFloat();
-                    wheel.frictionSlip = data->readFloat();
-                    wheel.rollInfluence = data->readFloat();
-                    int typeID = data->readUInt(10);
-                    wheel.brickTypeID = 0;
-                    if(typeID < 0 || typeID >= common->brickTypes->brickTypes.size())
-                        error("Invalid typeID " + std::to_string(typeID) + " on special brick carPlant request.");
-                    else
+                    int toRead = data->readUInt(6);
+                    for(unsigned int i = 0; i<toRead; i++)
                     {
-                        if(common->brickTypes->brickTypes[typeID]->uiname.find("vert wheel") == std::string::npos)
-                            error("Wheel brick data type from loaded car is not wheel?");
+                        int typeID = data->readUInt(10);
+
+                        if(typeID < 0 || typeID >= common->brickTypes->brickTypes.size())
+                        {
+                            error("Invalid typeID " + std::to_string(typeID) + " on special brick carPlant request.");
+                            break;
+                        }
+
+                        //special brick data
+                        brick *tmp = 0;
+                        if(common->brickTypes->brickTypes[typeID]->uiname.find("steering") != std::string::npos)
+                        {
+                            tmp = new steeringBrick;
+                            tmp->isSteeringWheel = true;
+                            tmp->isWheel = false;
+                        }
+                        else if(common->brickTypes->brickTypes[typeID]->uiname.find("vert wheel") != std::string::npos)
+                        {
+                            tmp = new wheelBrick;
+                            tmp->isWheel = true;
+                            tmp->isSteeringWheel = false;
+                            ((wheelBrick*)tmp)->loadOrder = source->carWheelsMadeSoFar;
+                            source->carWheelsMadeSoFar++;
+                        }
                         else
-                            wheel.brickTypeID = typeID;
+                        {
+                            tmp = new brick;
+                            tmp->isSteeringWheel = false;
+                            tmp->isWheel = false;
+                        }
+
+                        tmp->isSpecial = true;
+                        tmp->typeID = typeID;
+                        tmp->width = common->brickTypes->brickTypes[typeID]->width;
+                        tmp->length = common->brickTypes->brickTypes[typeID]->length;
+                        tmp->height = common->brickTypes->brickTypes[typeID]->height;
+
+                        tmp->material = 0;
+
+                        tmp->carX = data->readFloat();
+                        tmp->carY = data->readFloat();
+                        tmp->carPlatesUp = data->readUInt(10);
+                        tmp->yHalfPosition = data->readBit();
+                        tmp->carZ = data->readFloat();
+
+                        tmp->isSpecial = true;
+                        tmp->angleID = data->readUInt(2);
+                        int shapeFx = data->readUInt(4);
+                        int material = data->readUInt(4);
+                        if(shapeFx == 1)
+                            material += 1000;
+                        else if(shapeFx == 2)
+                            material += 2000;
+                        tmp->material = material;
+
+                        tmp->r = data->readUInt(8);
+                        tmp->r /= 255.0;
+                        tmp->g = data->readUInt(8);
+                        tmp->g /= 255.0;
+                        tmp->b = data->readUInt(8);
+                        tmp->b /= 255.0;
+                        tmp->a = data->readUInt(8);
+                        tmp->a /= 255.0;
+
+                        if(tmp->width <= 0 || tmp->width >= 255 || tmp->height <= 0 || tmp->height >= 255 || tmp->length <= 0 || tmp->length >= 255)
+                            break;
+
+                        tmp->builtBy = source->playerID;
+                        source->loadingCar->bricks.push_back(tmp);
                     }
 
-                    source->loadingCar->wheels.push_back(wheel);
-                    source->loadedCarWheels = true;
+                    source->specialBricksLeftToLoad -= toRead;
+
+                    break;
                 }
             }
 
-            if(source->loadedCarWheels && source->loadedCarBasic && source->loadedCarSpecial && source->loadingCar && source->loadedCarLights)
+            std::cout<<source->basicBricksLeftToLoad<<" basic bricks left\n";
+            std::cout<<source->specialBricksLeftToLoad<<" special bricks left\n";
+            std::cout<<"Loaded amounts: "<<(source->loadedCarAmountsPacket?"true":"false")<<"\n";
+            std::cout<<"Loaded wheels: "<<(source->loadedCarWheels?"true":"false")<<"\n";
+            std::cout<<"Loaded lights: "<<(source->loadedCarLights?"true":"false")<<"\n";
+
+            if(!source->loadedCarAmountsPacket)
+                return;
+            if(source->basicBricksLeftToLoad > 0)
+                return;
+            if(source->specialBricksLeftToLoad > 0)
+                return;
+            if(!source->loadedCarLights)
+                return;
+            if(!source->loadedCarWheels)
+                return;
+
+            std::cout<<"Ready to make a car!\n";
+
+            //Whatever happens, we're done with the car data:
+            source->basicBricksLeftToLoad = 0;
+            source->specialBricksLeftToLoad = 0;
+            source->loadedCarAmountsPacket = false;
+            source->loadedCarLights = false;
+            source->loadedCarWheels = false;
+
+            bool makeCar = true;
+            if(source->loadingCar->bricks.size() < 2)
             {
-                source->totalLoadedWheels = 0;
-                source->carWheelsMadeSoFar = 0;
-                source->loadedCarWheels = false;
-                source->loadedCarBasic = false;
-                source->loadedCarSpecial = false;
-                source->loadedCarLights = false;
+                makeCar = false;
+                source->bottomPrint("There were no bricks in your car to load!",5000);
+            }
+            if(source->lastAttemptedCarPlant + 5000 > SDL_GetTicks())
+            {
+                makeCar = false;
+                source->bottomPrint("Please wait a bit longer before planting another car!",5000);
+            }
 
-                bool makeCar = true;
-                if(source->loadingCar->bricks.size() < 2)
-                    makeCar = false;
-                if(source->lastAttemptedCarPlant + 5000 > SDL_GetTicks())
+            //See if any Lua scripts want to disable or change car making
+            bool cancelled = clientTryLoadCarEvent(source,source->loadingCar,source->loadCarAsCar);
+            if(cancelled)
+                makeCar = false;
+
+            if(makeCar)
+            {
+                source->lastAttemptedCarPlant = SDL_GetTicks();
+
+                if(source->loadCarAsCar)
                 {
-                    makeCar = false;
-                    source->bottomPrint("Please wait a bit longer before planting another car!",5000);
-                }
-
-                bool cancelled = clientTryLoadCarEvent(source,source->loadingCar,source->loadCarAsCar);
-
-                if(cancelled)
-                    makeCar = false;
-
-                if(makeCar)
-                {
-                    source->lastAttemptedCarPlant = SDL_GetTicks();
-
-                    if(source->loadCarAsCar)
+                    float heightCorrection = 0;
+                    common->compileBrickCar(source->loadingCar,heightCorrection,true,source->loadedCarOrigin);
+                    for(int a = 0; a<source->loadingCarLights.size(); a++)
                     {
-                        float heightCorrection = 0;
-                        common->compileBrickCar(source->loadingCar,heightCorrection,true,source->loadedCarOrigin);
-                        for(int a = 0; a<source->loadingCarLights.size(); a++)
-                        {
-                            source->loadingCarLights[a]->attachedCar = source->loadingCar;
-                            source->loadingCarLights[a]->offset.setY(source->loadingCarLights[a]->offset.y()-heightCorrection);
-                            source->loadingCar->lights.push_back(source->loadingCarLights[a]);
-                            for(int b = 0; b<common->users.size(); b++)
-                                source->loadingCarLights[a]->sendToClient(common->users[b]->netRef);
-                        }
-                        source->loadingCarLights.clear();
+                        source->loadingCarLights[a]->attachedCar = source->loadingCar;
+                        source->loadingCarLights[a]->offset.setY(source->loadingCarLights[a]->offset.y()-heightCorrection);
+                        source->loadingCar->lights.push_back(source->loadingCarLights[a]);
+                        for(int b = 0; b<common->users.size(); b++)
+                            source->loadingCarLights[a]->sendToClient(common->users[b]->netRef);
                     }
-                    else
-                    {
-                        for(int a = 0; a<source->loadingCar->bricks.size(); a++)
-                        {
-                            if(!source->loadingCar->bricks[a]->isWheel)
-                                continue;
-
-                            wheelBrick *tmp = (wheelBrick*)source->loadingCar->bricks[a];
-                            for(int b = 0; b<source->loadingCar->wheels.size(); b++)
-                            {
-                                if(source->loadingCar->wheels[b].loadOrder == tmp->loadOrder)
-                                {
-                                    tmp->wheelSettings = source->loadingCar->wheels[b];
-                                }
-                            }
-                        }
-
-                        for(int a = 0; a<source->loadingCar->bricks.size(); a++)
-                        {
-                            source->loadingCar->bricks[a]->calcGridFromCarPos(source->loadedCarOrigin);
-                            if(!common->addBrick(source->loadingCar->bricks[a],true))
-                            {
-                                delete source->loadingCar->bricks[a];
-                                source->loadingCar->bricks[a] = 0;
-                            }
-                            else
-                            {
-                                source->ownedBricks.push_back(source->loadingCar->bricks[a]);
-                                source->undoList.push_back(source->loadingCar->bricks[a]->serverID);
-                            }
-                        }
-                    }
-
-                    //for(int a = 0; a<source->loadingCarLights.size(); a++)
-                        //delete source->loadingCarLights[a];
                     source->loadingCarLights.clear();
                 }
                 else
                 {
-                    for(int a = 0; a<source->loadingCarLights.size(); a++)
-                        delete source->loadingCarLights[a];
-                    source->loadingCarLights.clear();
                     for(int a = 0; a<source->loadingCar->bricks.size(); a++)
-                        delete source->loadingCar->bricks[a];
-                    source->loadingCar->bricks.clear();
-                    delete source->loadingCar;
+                    {
+                        if(!source->loadingCar->bricks[a]->isWheel)
+                            continue;
+
+                        wheelBrick *tmp = (wheelBrick*)source->loadingCar->bricks[a];
+                        for(int b = 0; b<source->loadingCar->wheels.size(); b++)
+                        {
+                            if(source->loadingCar->wheels[b].loadOrder == tmp->loadOrder)
+                            {
+                                tmp->wheelSettings = source->loadingCar->wheels[b];
+                            }
+                        }
+                    }
+
+                    for(int a = 0; a<source->loadingCar->bricks.size(); a++)
+                    {
+                        source->loadingCar->bricks[a]->calcGridFromCarPos(source->loadedCarOrigin);
+                        if(!common->addBrick(source->loadingCar->bricks[a],true))
+                        {
+                            delete source->loadingCar->bricks[a];
+                            source->loadingCar->bricks[a] = 0;
+                        }
+                        else
+                        {
+                            source->ownedBricks.push_back(source->loadingCar->bricks[a]);
+                            source->undoList.push_back(source->loadingCar->bricks[a]->serverID);
+                        }
+                    }
                 }
-                source->loadingCar = 0;
+
+                //for(int a = 0; a<source->loadingCarLights.size(); a++)
+                    //delete source->loadingCarLights[a];
+                source->loadingCarLights.clear();
             }
+            else
+            {
+                for(int a = 0; a<source->loadingCarLights.size(); a++)
+                    delete source->loadingCarLights[a];
+                source->loadingCarLights.clear();
+                for(int a = 0; a<source->loadingCar->bricks.size(); a++)
+                    delete source->loadingCar->bricks[a];
+                source->loadingCar->bricks.clear();
+                delete source->loadingCar;
+            }
+            source->loadingCar = 0;
 
             return;
         }

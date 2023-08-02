@@ -84,13 +84,17 @@ struct clientData
 
     std::vector<light*> loadingCarLights;
     brickCar *loadingCar = 0;
-    bool loadedCarSpecial = false;
-    bool loadedCarBasic = false;
     bool loadedCarWheels = false;
     bool loadedCarLights = false;
     bool loadCarAsCar = false;
+    bool loadedCarAmountsPacket = false;
+    int basicBricksLeftToLoad = 0;
+    int specialBricksLeftToLoad = 0;
     btVector3 loadedCarOrigin = btVector3(0,0,0);
     unsigned int lastAttemptedCarPlant = 0;
+
+    //Just used for deleting partial car load attempts
+    unsigned int carLoadStartTime = 0;
 
     unsigned int lastChatMessage = 0;
 
