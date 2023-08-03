@@ -28,6 +28,8 @@ extern "C" {
     #include <lauxlib.h>
 }
 
+#define hardCodedNetworkVersion 10008
+
 struct clientData
 {
     int totalLoadedWheels = 0;

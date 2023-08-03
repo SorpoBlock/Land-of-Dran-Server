@@ -1540,6 +1540,15 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
         }
         case requestName:
         {
+            int theirNetworkVersion = data->readUInt(32);
+
+            if(theirNetworkVersion != hardCodedNetworkVersion)
+            {
+                info("Kicking client with outdated client version!");
+                host->kick(client);
+                return;
+            }
+
             std::string name = data->readString();
             float red = data->readFloat();
             float green = data->readFloat();

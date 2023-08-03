@@ -21,6 +21,7 @@ void clientData::forceTransformUpdate()
     forceTransform.writeFloat(controlling->getLinearVelocity().x());
     forceTransform.writeFloat(controlling->getLinearVelocity().y());
     forceTransform.writeFloat(controlling->getLinearVelocity().z());
+    forceTransform.writeBit(canJet);
 
     netRef->send(&forceTransform,true);
 }
@@ -51,6 +52,7 @@ void clientData::setControlling(dynamic *player)
     physicsData.writeFloat(player->getWorldTransform().getOrigin().x());
     physicsData.writeFloat(player->getWorldTransform().getOrigin().y());
     physicsData.writeFloat(player->getWorldTransform().getOrigin().z());
+    physicsData.writeBit(canJet);
 
     netRef->send(&physicsData,true);
 }

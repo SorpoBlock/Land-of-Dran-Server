@@ -803,6 +803,10 @@ static int setJetsEnabled(lua_State *L)
         if(common_lua->users[a]->playerID == clientID)
         {
             common_lua->users[a]->canJet = toggle;
+
+            if(common_lua->users[a]->controlling)
+                common_lua->users[a]->forceTransformUpdate();
+
             return 0;
         }
     }
