@@ -66,6 +66,8 @@ int main(int argc, char *argv[])
 
     info("Starting application...");
 
+    common.curlHandle = curl_multi_init();
+
     if(SDL_Init(SDL_INIT_TIMER))
     {
         error("Could not start up SDL");
@@ -269,6 +271,78 @@ int main(int argc, char *argv[])
     unsigned int msAtLastUpdate = SDL_GetTicks();
     while(cont)
     {
+        if(common.curlHandle)
+        {
+            int runningThreads;
+            CURLMcode mc = curl_multi_perform(common.curlHandle,&runningThreads);
+            if(mc)
+            {
+                error("curl_multi_perform failed with error code " + std::to_string(mc));
+            }
+        }
+
+        std::vector<serverClientHandle*> toKick;
+
+        for(int a = 0; a<common.users.size(); a++)
+        {
+            //A log in failed...
+            if(common.users[a]->logInState == 3)
+            {
+                //We can't kick them directly because they'll instantly be removed from common.users
+                //Thus messing up our for loop
+                toKick.push_back(common.users[a]->netRef);
+                continue;
+            }
+            //Process a good log in that just happened
+            else if(common.users[a]->logInState == 4)
+            {
+                clientData *source = common.users[a];
+
+                packet data;
+                data.writeUInt(packetType_connectionRepsonse,packetTypeBits);
+                data.writeBit(true);
+                data.writeUInt(getServerTime(),32);
+                data.writeUInt(common.brickTypes->specialBrickTypes,10);
+                data.writeUInt(common.dynamicTypes.size(),10);
+                data.writeUInt(common.itemTypes.size(),10);
+                source->netRef->send(&data,true);
+
+                info("New logged in user from " + source->netRef->getIP() + " now known as " + source->name + " their netID is " + std::to_string(common.lastPlayerID));
+
+                source->playerID = common.lastPlayerID;
+                common.lastPlayerID++;
+
+                for(int a = 0; a<common.users.size(); a++)
+                {
+                    packet data;
+                    data.writeUInt(packetType_addOrRemovePlayer,packetTypeBits);
+                    data.writeBit(true); // for player's list, not typing players list
+                    data.writeBit(true); //add
+                    data.writeString(source->name);
+                    data.writeUInt(source->playerID,16);
+                    common.users[a]->netRef->send(&data,true);
+                }
+
+                common.playSound("PlayerConnect");
+                common.messageAll("[colour='FF0000FF']" + source->name + " connected.","server");
+
+                sendInitalDataFirstHalf(&common,source,source->netRef);
+
+                //This only needs to happen once...
+                common.users[a]->logInState = 2;
+
+                if(source->authHandle)
+                {
+                    curl_multi_remove_handle(common.curlHandle,source->authHandle);
+                    curl_easy_cleanup(source->authHandle);
+                    source->authHandle = 0;
+                }
+            }
+        }
+
+        for(int a = 0; a<toKick.size(); a++)
+            common.theServer->kick(toKick[a]);
+
         if(common.users.size() > maxPlayersThisTime)
         {
             maxPlayersThisTime = common.users.size();

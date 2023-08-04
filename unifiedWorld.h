@@ -12,6 +12,7 @@
 #include "code/octree/octree.h"
 #include "code/emitterStruct.h"
 #include "code/rope.h"
+#include <CURL/curl.h>
 
 //#define bodyUserIndex_brick 55
 //#define bodyUserIndex_builtCar 66
@@ -32,6 +33,11 @@ extern "C" {
 
 struct clientData
 {
+    //0 if a guest or if we already logged in successfully:
+    CURL *authHandle = 0;
+    int logInState = 0; //0 = guest, 1 = waiting for master server auth, 2 = logged in totally, 3 = log in failed, 4 = good log in needs processing
+    int accountID = 0;  //0 = guest
+
     int totalLoadedWheels = 0;
     int carWheelsMadeSoFar = 0;
 
@@ -136,6 +142,8 @@ struct eventListener
 
 struct unifiedWorld
 {
+    CURLM *curlHandle = 0;
+
     float waterLevel = 15.0;
 
     std::vector<light*> lights;

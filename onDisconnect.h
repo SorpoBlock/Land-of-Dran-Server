@@ -17,6 +17,13 @@ void onDisconnect(server *host,serverClientHandle *client)
         {
             clientLeaveEvent(common->users[a]);
 
+            if(common->users[a]->authHandle)
+            {
+                curl_multi_remove_handle(common->curlHandle,common->users[a]->authHandle);
+                curl_easy_cleanup(common->users[a]->authHandle);
+                common->users[a]->authHandle = 0;
+            }
+
             if(common->users[a]->driving)
                 common->users[a]->driving->occupied = false;
 

@@ -35,6 +35,25 @@ std::string bts(bool in)
     return in ? "t" : "f";
 }
 
+size_t getAuthResponse(void *buffer,size_t size,size_t nmemb,void *userp)
+{
+    clientData *source = (clientData*)userp;
+
+    if(!source)
+        return nmemb;
+
+    std::string response;
+    response.assign((char*)buffer,nmemb);
+    info("Auth response: "+response+"\n");
+
+    if(response == "GOOD")
+        source->logInState = 4;
+    else
+        source->logInState = 3;
+
+    return nmemb;
+}
+
 void receiveData(server *host,serverClientHandle *client,packet *data)
 {
     unifiedWorld *common = (unifiedWorld*)host->userData;
@@ -202,7 +221,6 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
             source->loadingCar->ownerID = source->playerID;
 
             int packetSubType = data->readUInt(3);
-            std::cout<<"\nPacket sub type: "<<packetSubType<<"\n";
 
             switch(packetSubType)
             {
@@ -424,12 +442,6 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                 }
             }
 
-            std::cout<<source->basicBricksLeftToLoad<<" basic bricks left\n";
-            std::cout<<source->specialBricksLeftToLoad<<" special bricks left\n";
-            std::cout<<"Loaded amounts: "<<(source->loadedCarAmountsPacket?"true":"false")<<"\n";
-            std::cout<<"Loaded wheels: "<<(source->loadedCarWheels?"true":"false")<<"\n";
-            std::cout<<"Loaded lights: "<<(source->loadedCarLights?"true":"false")<<"\n";
-
             if(!source->loadedCarAmountsPacket)
                 return;
             if(source->basicBricksLeftToLoad > 0)
@@ -440,8 +452,6 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                 return;
             if(!source->loadedCarWheels)
                 return;
-
-            std::cout<<"Ready to make a car!\n";
 
             //Whatever happens, we're done with the car data:
             source->basicBricksLeftToLoad = 0;
@@ -1549,75 +1559,107 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                 return;
             }
 
-            std::string name = data->readString();
-            float red = data->readFloat();
-            float green = data->readFloat();
-            float blue = data->readFloat();
-
-            bool validName = true;
-            if(name.length() < 1)
-                validName = false;
-            if(name.length() > 255)
-                validName = false;
-
-            if(hasNonoWord(name))
-                name = replaceNonoWords(name);
-
-            if(name.length() > 32)
-                name = name.substr(0,32);
-
-            for(unsigned int a = 0; a<common->users.size(); a++)
+            bool wantsLogin = data->readBit();
+            if(wantsLogin)
             {
-                if(common->users[a]->name == name)
-                {
+                std::string accountName = data->readString();
+                std::string hashedSessionKey = data->readString();
+                source->name = accountName;
+
+                float red = data->readFloat();
+                float green = data->readFloat();
+                float blue = data->readFloat();
+                source->preferredRed = red;
+                source->preferredGreen = green;
+                source->preferredBlue = blue;
+
+                source->logInState = 1;
+
+                source->authHandle = curl_easy_init();
+                curl_easy_setopt(source->authHandle,CURLOPT_SSL_VERIFYHOST,0);
+                curl_easy_setopt(source->authHandle,CURLOPT_SSL_VERIFYPEER,0);
+                curl_easy_setopt(source->authHandle,CURLOPT_WRITEDATA,source);
+                curl_easy_setopt(source->authHandle,CURLOPT_WRITEFUNCTION,getAuthResponse);
+                std::string url = "https://dran.land/verifyPlayer.php";
+                std::string args = "hash=" + hashedSessionKey + "&name=" + accountName;
+                std::cout<<"Using args: "<<args<<"\n";
+                curl_easy_setopt(source->authHandle,CURLOPT_URL,url.c_str());
+                //curl_easy_setopt(source->authHandle,CURLOPT_POSTFIELDS,args.c_str()); apparently this doesn't work for multi ffs
+                curl_easy_setopt(source->authHandle,CURLOPT_POSTFIELDSIZE,args.length());
+                curl_easy_setopt(source->authHandle,CURLOPT_COPYPOSTFIELDS,args.c_str());
+                curl_multi_add_handle(common->curlHandle,source->authHandle);
+
+                return;
+            }
+            else //Is guest
+            {
+                std::string name = data->readString();
+
+                float red = data->readFloat();
+                float green = data->readFloat();
+                float blue = data->readFloat();
+
+                if(hasNonoWord(name))
+                    name = replaceNonoWords(name);
+
+                bool validName = true;
+                if(name.length() < 1)
                     validName = false;
-                    break;
+
+                name = name + "_Guest";
+
+                if(name.length() > 255)
+                    validName = false;
+
+                if(!validName)
+                {
+                    host->kick(client);
+                    return;
                 }
-            }
 
-            if(!validName)
-            {
-                validName = true;
-                name = name + "_" + std::to_string(rand());
-                //host->kick(client);
-                //return;
-            }
+                if(name.length() > 32)
+                    name = name.substr(0,32);
 
-            packet data;
-            data.writeUInt(packetType_connectionRepsonse,packetTypeBits);
-            data.writeBit(validName);
-            data.writeUInt(getServerTime(),32);
-            data.writeUInt(common->brickTypes->specialBrickTypes,10);
-            data.writeUInt(common->dynamicTypes.size(),10);
-            data.writeUInt(common->itemTypes.size(),10);
-            client->send(&data,true);
+                for(unsigned int a = 0; a<common->users.size(); a++)
+                {
+                    if(common->users[a]->name == name)
+                    {
+                        validName = false;
+                        break;
+                    }
+                }
 
-            if(!source)
-                error("Player not yet created for new client!");
-            else
-            {
+                if(!validName)
+                {
+                    validName = true;
+                    name = name + "_" + std::to_string(rand());
+                }
+
+                packet data;
+                data.writeUInt(packetType_connectionRepsonse,packetTypeBits);
+                data.writeBit(validName);
+                data.writeUInt(getServerTime(),32);
+                data.writeUInt(common->brickTypes->specialBrickTypes,10);
+                data.writeUInt(common->dynamicTypes.size(),10);
+                data.writeUInt(common->itemTypes.size(),10);
+                client->send(&data,true);
+
+                //Shouldn't ever trigger this and if we do it crashses anyway
+                if(!source)
+                    error("Player not yet created for new client!");
+
+                info("New guest from " + client->getIP() + " now known as " + name + " their netID is " + std::to_string(common->lastPlayerID));
+
                 source->name = name;
                 source->playerID = common->lastPlayerID;
                 common->lastPlayerID++;
-            }
 
-            /*if(source->controlling)
-            {
-                source->controlling->redTint = red;
-                source->controlling->greenTint = green;
-                source->controlling->blueTint = blue;
-                common->setShapeName(source->controlling,name,source->controlling->redTint,source->controlling->greenTint,source->controlling->blueTint);
-            }*/
-            source->preferredRed = red;
-            source->preferredGreen = green;
-            source->preferredBlue = blue;
+                source->preferredRed = red;
+                source->preferredGreen = green;
+                source->preferredBlue = blue;
 
-            info("New client from " + client->getIP() + " now known as " + name + " their ID is " + std::to_string(common->lastPlayerID));
-
-            for(int a = 0; a<common->users.size(); a++)
-            {
-                //if(common->users[a]->hasLuaAccess)
-                //{
+                for(int a = 0; a<common->users.size(); a++)
+                {
                     packet data;
                     data.writeUInt(packetType_addOrRemovePlayer,packetTypeBits);
                     data.writeBit(true); // for player's list, not typing players list
@@ -1625,15 +1667,15 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                     data.writeString(name);
                     data.writeUInt(source->playerID,16);
                     common->users[a]->netRef->send(&data,true);
-                //}
+                }
+
+                common->playSound("PlayerConnect");
+                common->messageAll("[colour='FF0000FF']" + source->name + " connected.","server");
+
+                sendInitalDataFirstHalf(common,source,client);
+
+                return;
             }
-
-            common->playSound("PlayerConnect");
-            common->messageAll("[colour='FF0000FF']" + source->name + " connected.","server");
-
-            sendInitalDataFirstHalf(common,source,client);
-
-            return;
         }
         case startLoadingStageTwo:
         {
