@@ -664,7 +664,7 @@ static int hasEvalAccess(lua_State *L)
     if(id < 0)
     {
         error("ID passed was under 0");
-        lua_pushnumber(L,0);
+        lua_pushboolean(L,false);
         return 1;
     }
 
@@ -679,6 +679,67 @@ static int hasEvalAccess(lua_State *L)
 
     error("Could not find client ID " + std::to_string(id));
     lua_pushboolean(L,false);
+    return 1;
+}
+
+static int isGuest(lua_State *L)
+{
+    scope("isGuest");
+
+    lua_getfield(L, -1, "id");
+    int id = lua_tointeger(L,-1);
+    lua_pop(L,2);
+
+    if(id < 0)
+    {
+        error("ID passed was under 0");
+        lua_pushboolean(L,true);
+        return 1;
+    }
+
+    for(unsigned int a = 0; a<common_lua->users.size(); a++)
+    {
+        if(common_lua->users[a]->playerID == id)
+        {
+            lua_pushboolean(L,common_lua->users[a]->logInState != 2);
+            return 1;
+        }
+    }
+
+    error("Could not find client ID " + std::to_string(id));
+    lua_pushboolean(L,true);
+    return 1;
+}
+
+static int getID(lua_State *L)
+{
+    scope("getID");
+
+    lua_getfield(L, -1, "id");
+    int id = lua_tointeger(L,-1);
+    lua_pop(L,2);
+
+    if(id < 0)
+    {
+        error("ID passed was under 0");
+        lua_pushnumber(L,0);
+        return 1;
+    }
+
+    for(unsigned int a = 0; a<common_lua->users.size(); a++)
+    {
+        if(common_lua->users[a]->playerID == id)
+        {
+            if(common_lua->users[a]->logInState != 2)
+                lua_pushnumber(L,0);
+            else
+                lua_pushnumber(L,common_lua->users[a]->accountID);
+            return 1;
+        }
+    }
+
+    error("Could not find client ID " + std::to_string(id));
+    lua_pushnumber(L,0);
     return 1;
 }
 
@@ -901,7 +962,7 @@ void registerClientFunctions(lua_State *L)
         {"setCameraPosition",setCameraPosition},
         {"setCameraDirection",setCameraDirection},
         {"setCameraFreelook",setCameraFreelook},
-        {"driveCar",driveCar},
+        //{"driveCar",driveCar},
         {"bottomPrint",bottomPrint},
         {"spawnPlayer",LUAspawnPlayer},
         {"clearBricks",LUAclearBricks},
@@ -917,6 +978,8 @@ void registerClientFunctions(lua_State *L)
         {"getIP",getIP},
         {"getPing",getPing},
         {"kick",kick},
+        {"getID",getID},
+        {"isGuest",isGuest},
         {NULL,NULL}};
     luaL_newmetatable(L,"clientMETATABLE");
     luaL_setfuncs(L,dynamicRegs,0);

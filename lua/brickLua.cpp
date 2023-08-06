@@ -127,7 +127,7 @@ static int getNamedBrickIdx(lua_State *L)
     return 1;
 }
 
-static int getBrickAt(lua_State *L)
+/*static int getBrickAt(lua_State *L)
 {
     scope("getBrickAt");
 
@@ -159,7 +159,7 @@ static int getBrickAt(lua_State *L)
     lua_setfield(L,-2,"type");
 
     return 1;
-}
+}*/
 
 static int getBrickName(lua_State *L)
 {
@@ -505,7 +505,7 @@ void registerBrickFunctions(lua_State *L)
     lua_register(L,"getBrickIdx",getBrickIdx);
     lua_register(L,"getNumNamedBricks",getNumNamedBricks);
     lua_register(L,"getNamedBrickIdx",getNamedBrickIdx);
-    lua_register(L,"getBrickAt",getBrickAt);
+    //lua_register(L,"getBrickAt",getBrickAt);
 }
 
 

@@ -142,6 +142,9 @@ struct eventListener
 
 struct unifiedWorld
 {
+    unsigned int maxPlayers = 30;
+    bool mature = false;
+    std::string serverName = "My Cool Server";
     CURLM *curlHandle = 0;
 
     float waterLevel = 15.0;
@@ -170,7 +173,8 @@ struct unifiedWorld
     void callEvent(std::string eventName);
 
     lua_State* luaState = 0;
-    std::string luaPassword = "meatyone";
+    std::string luaPassword = "changeme";
+    bool useLuaPassword = false;
 
     bool useRelativeWalkingSpeed = false;
 

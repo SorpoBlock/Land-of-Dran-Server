@@ -46,8 +46,18 @@ size_t getAuthResponse(void *buffer,size_t size,size_t nmemb,void *userp)
     response.assign((char*)buffer,nmemb);
     info("Auth response: "+response+"\n");
 
-    if(response == "GOOD")
+    if(response.length() < 5)
+    {
+        source->logInState = 3;
+        return nmemb;
+    }
+
+    if(response.substr(0,4) == "GOOD")
+    {
         source->logInState = 4;
+        std::string id = response.substr(4,response.length() - 4);
+        source->accountID = atoi(id.c_str());
+    }
     else
         source->logInState = 3;
 
@@ -991,6 +1001,10 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
         case evalPassword:
         {
             std::string theirGuess = data->readString();
+
+            if(!common->useLuaPassword)
+                return;
+
             if(common->luaPassword.length() < 1)
                 return;
 

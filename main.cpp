@@ -20,6 +20,8 @@
 #include "code/lua/brickCarLua.h"
 #include "code/lua/emitter.h"
 #include "code/lua/lightLua.h"
+#include <bearssl/bearssl_hash.h>
+#include <conio.h>
 
 extern "C" {
     #include <lua.h>
@@ -51,6 +53,82 @@ void updateClientConsoles(std::string text)
     }
 }
 
+std::string GetHexRepresentation(const unsigned char *Bytes, size_t Length) {
+    std::ostringstream os;
+    os.fill('0');
+    os<<std::hex;
+    for(const unsigned char *ptr = Bytes; ptr < Bytes+Length; ++ptr) {
+        os<<std::setw(2)<<(unsigned int)*ptr;
+    }
+    return os.str();
+}
+
+bool loginOkay = false;
+std::string username = "";
+std::string key = "";
+std::string keyID = "";
+
+size_t getHeartbeatResponse(void *buffer,size_t size,size_t nmemb,void *userp)
+{
+    /*if(nmemb > 0)
+    {
+        std::string response;
+        response.assign((char*)buffer,nmemb);
+        info(response);
+    }*/
+    return nmemb;
+}
+
+size_t getLoginResponse(void *buffer,size_t size,size_t nmemb,void *userp)
+{
+    if(nmemb > 0)
+    {
+        std::string response;
+        response.assign((char*)buffer,nmemb);
+
+        std::vector<std::string> words;
+        std::stringstream ss(response);
+        std::string word = "";
+        while(ss >> word)
+            words.push_back(word);
+
+        if(words.size() < 1)
+        {
+            error("Login server bad response: " + response);
+            return nmemb;
+        }
+
+        if(words[0] == "NOACCOUNT")
+        {
+            error("No account by that name. Register at https://dran.land");
+            return nmemb;
+        }
+        else if(words[0] == "BAD")
+        {
+            error("Incorrect password!");
+            return nmemb;
+        }
+        else if(words[0] == "GOOD")
+        {
+            if(words.size() < 3)
+            {
+                error("Login server bad response: " + response);
+                return nmemb;
+            }
+
+            info("Welcome, " + username + ".");
+            keyID = words[1];
+            key = words[2];
+            loginOkay = true;
+        }
+        else
+            error("Login server bad response: " + response);
+    }
+    return nmemb;
+}
+
+bool MySearchCallback(brick *value){ return false; }
+
 int main(int argc, char *argv[])
 {
     int maxPlayersThisTime = 0;
@@ -65,6 +143,133 @@ int main(int argc, char *argv[])
     logger::setCallback(updateClientConsoles);
 
     info("Starting application...");
+
+    preferenceFile settingsFile;
+    settingsFile.importFromFile("config.txt");
+
+    settingsFile.addStringPreference("SERVERNAME","My Server!");
+    settingsFile.addBoolPreference("MATURE",false);
+    settingsFile.addBoolPreference("USEEVALPASSWORD",false);
+    settingsFile.addStringPreference("EVALPASSWORD","changeme");
+
+    common.mature = settingsFile.getPreference("MATURE")->toBool();
+    std::string tmpName = settingsFile.getPreference("SERVERNAME")->toString();
+    common.serverName = "";
+
+    for(int a = 0; a<tmpName.length(); a++)
+    {
+        if(tmpName[a] >= 'a' && tmpName[a] <= 'z')
+            common.serverName = common.serverName + tmpName[a];
+        else if(tmpName[a] >= 'A' && tmpName[a] <= 'Z')
+            common.serverName = common.serverName + tmpName[a];
+        else if(tmpName[a] >= '0' && tmpName[a] <= '9')
+            common.serverName = common.serverName + tmpName[a];
+        else if(tmpName[a] == ' ' || tmpName[a] == '-' || tmpName[a] == '_')
+            common.serverName = common.serverName + tmpName[a];
+    }
+
+    common.useLuaPassword = settingsFile.getPreference("USEEVALPASSWORD")->toBool();
+    common.luaPassword = settingsFile.getPreference("EVALPASSWORD")->toString();
+    if(common.luaPassword == " " || common.luaPassword == "changeme" || common.luaPassword.length() < 1)
+        common.useLuaPassword = false;
+
+    settingsFile.exportToFile("config.txt");
+
+    int loginInfoMagicNumber = 38398271;
+
+    std::ifstream loginInfo("loginInfo.bin",std::ios::binary);
+    if(loginInfo.is_open())
+    {
+        int magicNumber = 0;
+        loginInfo.read((char*)&magicNumber,sizeof(int));
+        if(magicNumber == loginInfoMagicNumber)
+        {
+            //Actually get username
+            loginInfo.read((char*)&magicNumber,sizeof(int));
+            if(magicNumber > 0 && magicNumber < 256)
+            {
+                char nameBuf[256];
+
+                loginInfo.read(nameBuf,magicNumber);
+                nameBuf[magicNumber] = 0;
+                username = nameBuf;
+
+                //Get ID
+                loginInfo.read((char*)&magicNumber,sizeof(int));
+                if(magicNumber < 0 || magicNumber > 255)
+                    error("Login info file existed but was invalid.");
+                else
+                {
+                    loginInfo.read(nameBuf,magicNumber);
+                    nameBuf[magicNumber] = 0;
+                    keyID = nameBuf;
+
+                    //Get key
+                    loginInfo.read(nameBuf,40);
+                    nameBuf[40] = 0;
+                    key = nameBuf;
+                }
+            }
+            else
+                error("Login info file existed but was invalid.");
+        }
+        else
+            error("Login info file existed but was invalid.");
+        loginInfo.close();
+    }
+
+    if(username.length() < 1 || key.length() < 1 || keyID.length() < 1)
+    {
+        forceLogin:
+
+        info("No hosting key detected, please login to create one.");
+        info("Username: ");
+        std::cin>>username;
+        info("Password:");
+        std::string password;
+
+        bool keepGettingInput = true;
+        while(keepGettingInput)
+        {
+            char a = getch();
+            if(a == '\n' || a == '\r')
+                keepGettingInput = false;
+            else
+                password += a;
+        }
+
+        CURL *curlHandle = curl_easy_init();
+        curl_easy_setopt(curlHandle, CURLOPT_SSL_VERIFYPEER , 0);
+        curl_easy_setopt(curlHandle, CURLOPT_SSL_VERIFYHOST , 0);
+        curl_easy_setopt(curlHandle,CURLOPT_WRITEFUNCTION,getLoginResponse);
+        std::string url = "https://dran.land/getHostingKey.php";
+        std::string args = "pass=" + password + "&name=" + username;
+        curl_easy_setopt(curlHandle,CURLOPT_URL,url.c_str());
+        curl_easy_setopt(curlHandle,CURLOPT_POSTFIELDS,args.c_str());
+        CURLcode res = curl_easy_perform(curlHandle);
+        curl_easy_cleanup(curlHandle);
+
+        if(!loginOkay)
+            goto forceLogin;
+
+        std::ofstream loginInfo("loginInfo.bin",std::ios::binary);
+        if(loginInfo.is_open())
+        {
+            loginInfo.write((char*)&loginInfoMagicNumber,sizeof(int));
+
+            int nameLength = username.length();
+            loginInfo.write((char*)&nameLength,sizeof(int));
+            loginInfo.write(username.c_str(),username.length());
+
+            nameLength = keyID.length();
+            loginInfo.write((char*)&nameLength,sizeof(int));
+            loginInfo.write(keyID.c_str(),keyID.length());
+
+            loginInfo.write(key.c_str(),40);
+
+            loginInfo.close();
+        }
+    }
 
     common.curlHandle = curl_multi_init();
 
@@ -126,16 +331,19 @@ int main(int argc, char *argv[])
     registerLightFunctions(common.luaState);
     addEventNames(common.luaState);
 
+    preferenceFile addonsList;
+    addonsList.importFromFile("add-ons/add-onsList.txt");
+
     info("Loading add-ons...");
-    for (recursive_directory_iterator i("addons"), end; i != end; ++i)
+    for (recursive_directory_iterator i("add-ons"), end; i != end; ++i)
     {
         if (!is_directory(i->path()))
         {
             if(i->path().filename() == "server.lua")
             {
                 std::string addonName = i->path().parent_path().string();
-                if(addonName.substr(0,7) == "addons\\")
-                    addonName = addonName.substr(7,addonName.length() - 7);
+                if(addonName.substr(0,8) == "add-ons\\")
+                    addonName = addonName.substr(8,addonName.length() - 8);
                 if(addonName.find("\\") != std::string::npos)
                 {
                     error("Not loading " + i->path().string() + " because it is nested!");
@@ -144,10 +352,24 @@ int main(int argc, char *argv[])
                 if(common.luaState,i->path().string().length() < 1)
                     continue;
 
+                if(addonsList.getPreference(addonName))
+                {
+                    if(!addonsList.getPreference(addonName)->toBool())
+                    {
+                        info(addonName + " disabled, skipping");
+                        continue;
+                    }
+                }
+                else
+                {
+                    info(addonName + " is new, enabling");
+                    addonsList.addBoolPreference(addonName,true);
+                }
+
                 info("Loading " + addonName);
                 if(luaL_dofile(common.luaState,i->path().string().c_str()))
                 {
-                    error("Lua error loading addon " + addonName);
+                    error("Lua error loading add-on " + addonName);
                     if(lua_gettop(common.luaState) > 0)
                     {
                         const char* err = lua_tostring(common.luaState,-1);
@@ -161,8 +383,10 @@ int main(int argc, char *argv[])
         }
     }
 
+    addonsList.exportToFile("add-ons/add-onsList.txt");
+
     info("Loading decals");
-    common.loadDecals("addons/decals");
+    common.loadDecals("add-ons/decals");
 
     info("Loading default types...");
     common.brickTypes = new brickLoader("assets/brick/types","assets/brick/prints");
@@ -266,11 +490,40 @@ int main(int argc, char *argv[])
     unsigned int lastFrameCheck = SDL_GetTicks();
     unsigned int frames = 0;
 
+    unsigned int lastMasterListPost = 0;
+    CURL *masterServerPoster = 0;
+
     //unsigned int msBetweenUpdates = 60;
     //bool everyOtherLoop = false;
-    unsigned int msAtLastUpdate = SDL_GetTicks();
+    unsigned int msAtLastUpdate = 0;
     while(cont)
     {
+        if(SDL_GetTicks() - lastMasterListPost > 60000*4)
+        {
+            lastMasterListPost = SDL_GetTicks();
+
+            if(masterServerPoster)
+            {
+                curl_easy_cleanup(masterServerPoster);
+                masterServerPoster = 0;
+            }
+
+            //info("Posting to master server...");
+            masterServerPoster = curl_easy_init();
+            curl_easy_setopt(masterServerPoster,CURLOPT_SSL_VERIFYHOST,0);
+            curl_easy_setopt(masterServerPoster,CURLOPT_SSL_VERIFYPEER,0);
+            //curl_easy_setopt(masterServerPoster,CURLOPT_WRITEDATA,source);
+            curl_easy_setopt(masterServerPoster,CURLOPT_WRITEFUNCTION,getHeartbeatResponse);
+            std::string url = "https://dran.land/heartbeat.php";
+            std::string args = "key=" + key + "&id=" + keyID + "&players=" + std::to_string(common.users.size()) + "&maxplayers=30&mature=" + (common.mature?"1":"0") + "&servername=" + common.serverName;
+            curl_easy_setopt(masterServerPoster,CURLOPT_URL,url.c_str());
+            curl_easy_setopt(masterServerPoster,CURLOPT_POSTFIELDSIZE,args.length());
+            curl_easy_setopt(masterServerPoster,CURLOPT_COPYPOSTFIELDS,args.c_str());
+            CURLMcode code = curl_multi_add_handle(common.curlHandle,masterServerPoster);
+            if(code != CURLM_OK)
+                error(std::string("Posting to master server resulted in error ") + curl_multi_strerror(code));
+        }
+
         if(common.curlHandle)
         {
             int runningThreads;

@@ -1304,7 +1304,7 @@ bool unifiedWorld::compileBrickCar(brickCar *toAdd,float &heightCorrection,bool 
     btMotionState *ms = new btDefaultMotionState(startTrans);
 
     //toAdd->body = new dynamic(mass,ms,wholeShape,inertia,lastDynamicID,physicsWorld);
-    toAdd->mass = ((float)toAdd->bricks.size())*2.0;
+    toAdd->mass = ((float)toAdd->bricks.size());//*2.0;
     toAdd->body = new dynamic(toAdd->mass,ms,wholeShape,inertia,lastDynamicID,physicsWorld);
     if(toAdd->wheels.size() == 2)
     {
