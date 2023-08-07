@@ -118,9 +118,79 @@ void addEventNames(lua_State *L)
     common_lua->events.push_back(eventListener("clientTryLoadCar"));
     common_lua->events.push_back(eventListener("clientChat"));
     common_lua->events.push_back(eventListener("clientAdminOrb"));
+    common_lua->events.push_back(eventListener("clientJoin"));
 
     lua_register(L,"registerEventListener",registerEventListener);
     lua_register(L,"unregisterEventListener",unregisterEventListener);
+}
+
+void clientJoin(clientData *source)
+{
+    //Maybe I should just have the event as a global variable...
+    eventListener *event = 0;
+    for(unsigned int a = 0; a<common_lua->events.size(); a++)
+    {
+        if(common_lua->events[a].eventName == "clientJoin")
+        {
+            event = &common_lua->events[a];
+            break;
+        }
+    }
+
+    if(!event)
+    {
+        error("clientJoin event dissapeared!");
+        return;
+    }
+
+    int top = lua_gettop(common_lua->luaState);
+
+    if(top > 0)
+        lua_pop(common_lua->luaState,top);
+
+    for(unsigned int a = 0; a<event->functionNames.size(); a++)
+    {
+        lua_getglobal(common_lua->luaState,event->functionNames[a].c_str());
+        if(!lua_isfunction(common_lua->luaState,1))
+        {
+            error("Function " + event->functionNames[a] + " was assigned to " + event->eventName + " but doesn't appear to be a valid function!");
+            lua_pop(common_lua->luaState,1);
+        }
+        else
+        {
+            lua_newtable(common_lua->luaState);
+            lua_getglobal(common_lua->luaState,"clientMETATABLE");
+            lua_setmetatable(common_lua->luaState,-2);
+            lua_pushinteger(common_lua->luaState,source->playerID);
+            lua_setfield(common_lua->luaState,-2,"id");
+
+            if(lua_pcall(common_lua->luaState,1,0,0))
+            {
+                error("Error in lua call to event listener function " + event->functionNames[a] + " for event " + event->eventName);
+                if(lua_gettop(common_lua->luaState) > 0)
+                {
+                    const char *err = lua_tostring(common_lua->luaState,-1);
+                    if(!err)
+                        continue;
+                    std::string errorstr = err;
+
+                    int args = lua_gettop(common_lua->luaState);
+                    if(args > 0)
+                        lua_pop(common_lua->luaState,args);
+
+                    replaceAll(errorstr,"[","\\[");
+
+                    error("[colour='FFFF0000']" + errorstr);
+                }
+            }
+            int rets = lua_gettop(common_lua->luaState);
+            if(rets != 0)
+            {
+                error(event->eventName + " listener " + event->functionNames[a] + " was meant to return no arguments, returned " + std::to_string(rets) + ". Will ignore return values!");
+                lua_pop(common_lua->luaState,rets);
+            }
+        }
+    }
 }
 
 bool clientAdminOrb(clientData* source,bool startOrStop,float &x,float &y,float &z)

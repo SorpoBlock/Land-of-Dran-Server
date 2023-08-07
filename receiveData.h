@@ -362,7 +362,7 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                         if(tmp->width <= 0 || tmp->width >= 255 || tmp->height <= 0 || tmp->height >= 255 || tmp->length <= 0 || tmp->length >= 255)
                             break;
 
-                        tmp->builtBy = source->playerID;
+                        tmp->builtBy = source->accountID;
                         source->loadingCar->bricks.push_back(tmp);
                     }
 
@@ -442,7 +442,7 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                         if(tmp->width <= 0 || tmp->width >= 255 || tmp->height <= 0 || tmp->height >= 255 || tmp->length <= 0 || tmp->length >= 255)
                             break;
 
-                        tmp->builtBy = source->playerID;
+                        tmp->builtBy = source->accountID;
                         source->loadingCar->bricks.push_back(tmp);
                     }
 
@@ -1128,7 +1128,7 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
             else
                 theBrick = new brick;
 
-            theBrick->builtBy = source->playerID;
+            theBrick->builtBy = source->accountID;
 
             theBrick->posX = mainX;
             theBrick->xHalfPosition = xPartial;
@@ -1286,7 +1286,7 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                             if(body->getUserPointer())
                             {
                                 brick *theBrick = (brick*)body->getUserPointer();
-                                if(theBrick->builtBy == (int)source->playerID)
+                                if(theBrick->builtBy == (int)source->accountID)
                                 {
                                     common->setBrickColor(theBrick,paintColor.x(),paintColor.y(),paintColor.z(),paintColor.w());
                                     return;
@@ -1400,7 +1400,7 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                                         if(body->getUserPointer())
                                         {
                                             brick *theBrick = (brick*)body->getUserPointer();
-                                            if(theBrick->builtBy == (int)source->playerID)
+                                            if(theBrick->builtBy == (int)source->accountID)
                                             {
                                                 common->removeBrick(theBrick);
                                                 return;
@@ -1432,7 +1432,7 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                                     if(body->getUserIndex() == bodyUserIndex_brick && body->getUserPointer())
                                     {
                                         brick *theBrick = (brick*)body->getUserPointer();
-                                        if((unsigned)theBrick->builtBy == source->playerID || source->hasLuaAccess)
+                                        if((unsigned)theBrick->builtBy == source->accountID || source->hasLuaAccess)
                                         {
                                             common->playSound("WrenchHit",rayend.x(),rayend.y(),rayend.z(),false);
                                             source->lastWrenchedBrick = theBrick;
@@ -1517,7 +1517,9 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                                             return;
                                         }
                                         else
-                                            source->bottomPrint("You can only wrench your own bricks!",4000);
+                                        {
+                                            source->bottomPrint("This brick was built by ID" + std::to_string(theBrick->builtBy) + "!",4000);
+                                        }
                                     }
                                     else if(body->getUserIndex() == bodyUserIndex_builtCar && body->getUserPointer())
                                     {
@@ -1596,7 +1598,7 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                 curl_easy_setopt(source->authHandle,CURLOPT_WRITEFUNCTION,getAuthResponse);
                 std::string url = "https://dran.land/verifyPlayer.php";
                 std::string args = "hash=" + hashedSessionKey + "&name=" + accountName;
-                std::cout<<"Using args: "<<args<<"\n";
+                //std::cout<<"Using args: "<<args<<"\n";
                 curl_easy_setopt(source->authHandle,CURLOPT_URL,url.c_str());
                 //curl_easy_setopt(source->authHandle,CURLOPT_POSTFIELDS,args.c_str()); apparently this doesn't work for multi ffs
                 curl_easy_setopt(source->authHandle,CURLOPT_POSTFIELDSIZE,args.length());
@@ -1687,6 +1689,8 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                 common->messageAll("[colour='FF0000FF']" + source->name + " connected.","server");
 
                 sendInitalDataFirstHalf(common,source,client);
+
+                clientJoin(source);
 
                 return;
             }

@@ -134,8 +134,12 @@ int main(int argc, char *argv[])
     int maxPlayersThisTime = 0;
 
     common_lua = &common;
-    common.tree = new Octree<brick*>(brickTreeSize*2,0);
-    common.tree->setEmptyValue(0);
+    /*common.tree = new Octree<brick*>(brickTreeSize*2,0);
+    common.tree->setEmptyValue(0);*/
+    common.overlapTree = new brickPointerTree;
+
+    for(int a = 0; a<64; a++)
+        common.colorSet.push_back({1,0,0,1});
 
     logger::setErrorFile("logs/error.txt");
     logger::setInfoFile("logs/log.txt");
@@ -465,9 +469,6 @@ int main(int argc, char *argv[])
     common.addMusicType("Analog","assets/sound/analog.wav");
     common.addMusicType("Drums","assets/sound/drums.wav");
 
-    info("Loading initial build...");
-    common.loadBlocklandSave("assets/brick/CityCollab.bls");
-
     /*for(unsigned int a = 0; a<5; a++)
     {
         item *i = common.addItem(hammerItem);
@@ -590,6 +591,8 @@ int main(int argc, char *argv[])
                     curl_easy_cleanup(source->authHandle);
                     source->authHandle = 0;
                 }
+
+                clientJoin(source);
             }
         }
 
@@ -755,7 +758,7 @@ int main(int argc, char *argv[])
                 continue;
 
             //boyancy and jets
-            float waterLevel = 15.0;
+            float waterLevel = common.waterLevel;
             if(!d->isJetting)
             {
                 if(d->getWorldTransform().getOrigin().y() < waterLevel-2)

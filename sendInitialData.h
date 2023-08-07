@@ -57,6 +57,13 @@ void sendInitalDataFirstHalf(unifiedWorld *common,clientData *source,serverClien
         data.writeBit(common->soundIsMusic[a]);
         client->send(&data,true);
     }
+
+    //Water level:
+    packet waterLevel;
+    waterLevel.writeUInt(packetType_waterOrDecal,packetTypeBits);
+    waterLevel.writeBit(true); //water, not decals
+    waterLevel.writeFloat(common->waterLevel);
+    client->send(&waterLevel,true);
 }
 
 

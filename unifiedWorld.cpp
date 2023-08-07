@@ -356,7 +356,8 @@ void unifiedWorld::sendDecals(serverClientHandle *target)
         }
 
         packet data;
-        data.writeUInt(packetType_otherAsset,packetTypeBits);
+        data.writeUInt(packetType_waterOrDecal,packetTypeBits);
+        data.writeBit(false); //decals, not water
         data.writeUInt(toSendThisTime,7);
 
         for(int a = sentSoFar; a<sentSoFar+toSendThisTime; a++)
@@ -1382,6 +1383,8 @@ void unifiedWorld::setShapeName(dynamic *toSet,std::string text,float r,float g,
     theServer->send(&data,true);
 }
 
+bool StopAtFirstHit(brick *val){return false;}
+
 bool unifiedWorld::addBrick(brick *theBrick,bool stopOverlaps,bool colliding,bool networking)
 {
     if(theBrick->isSpecial)
@@ -1419,54 +1422,6 @@ bool unifiedWorld::addBrick(brick *theBrick,bool stopOverlaps,bool colliding,boo
         std::cout<<"Didn't make it!\n";
         return false;
     }
-    //std::cout<<theBrick->x<<","<<theBrick->y<<","<<theBrick->z<<"\n";
-    //std::cout<<"Before: "<<theBrick->x<<","<<theBrick->z<<" eDIM: "<<effectiveWidth<<","<<effectiveLength<<"\n";
-
-    //theBrick->x = floor(theBrick->x*2.0)/2.0;
-    //theBrick->z = floor(theBrick->z*2.0)/2.0;
-
-    /*float oldX = theBrick->x;
-    float oldY = theBrick->y;
-    float oldZ = theBrick->z;
-
-    //If odd dim
-    if(effectiveWidth % 2)
-        theBrick->x = floor(theBrick->x);
-    else
-        theBrick->x = floor(theBrick->x+0.5)-0.5;
-
-    if(effectiveLength % 2)
-        theBrick->z = floor(theBrick->z);
-    else
-        theBrick->z = floor(theBrick->z+0.5)-0.5;
-
-    double multi = 2.5;
-    if(theBrick->height % 2)
-    {
-        theBrick->y = 0.2+floorl(theBrick->y*multi)/multi;
-    }
-    else
-    {
-        theBrick->y = floorl((0.2+theBrick->y)*multi)/multi;
-    }
-
-    if(stopOverlaps)
-    {
-        if(theBrick->y != oldY)
-        {
-            std::cout<<theBrick->height<<" ... "<<theBrick->y<<" changed from "<<oldY<<" difference: "<<oldY-theBrick->y<<"\n";
-        }
-
-        if(theBrick->x != oldX)
-        {
-            std::cout<<theBrick->width<<" ... "<<theBrick->x<<" changed from "<<oldX<<" difference: "<<oldX-theBrick->x<<"\n";
-        }
-
-        if(theBrick->z != oldZ)
-        {
-            std::cout<<theBrick->length<<" ... "<<theBrick->z<<" changed from "<<oldZ<<" difference: "<<oldX-theBrick->z<<"\n";
-        }
-    }*/
 
     theBrick->serverID = lastBrickID;
     lastBrickID++;
@@ -1477,7 +1432,7 @@ bool unifiedWorld::addBrick(brick *theBrick,bool stopOverlaps,bool colliding,boo
         /*if(effectiveWidth % 2 == 0)
             fx++;*/
         int fy = ((float)theBrick->uPosY) + (theBrick->yHalfPosition ? 1.0 : 0.0) - ((float)theBrick->height)/2.0;
-        int fz = theBrick->posZ + brickTreeSize;// + (theBrick->zHalfPosition ? 1 : 0)
+        int fz = theBrick->posZ + brickTreeSize;
         /*if(effectiveLength % 2 == 0)
             fz++;*/
         if(theBrick->angleID % 2 == 0)
@@ -1493,6 +1448,58 @@ bool unifiedWorld::addBrick(brick *theBrick,bool stopOverlaps,bool colliding,boo
 
         if(stopOverlaps)
         {
+            if(theBrick->angleID % 2 == 0)
+            {
+                double fxd = fx;
+                double fyd = fy;
+                double fzd = fz;
+
+                double searchMin[3];
+                searchMin[0] = fxd + 0.01;
+                searchMin[1] = fyd + 0.01;
+                searchMin[2] = fzd + 0.01;
+
+                fxd += theBrick->width;
+                fyd += theBrick->height;
+                fzd += theBrick->length;
+
+                double searchMax[3];
+                searchMax[0] = fxd - 0.01;
+                searchMax[1] = fyd - 0.01;
+                searchMax[2] = fzd - 0.01;
+
+                int hits = overlapTree->Search(searchMin,searchMax,StopAtFirstHit);
+                if(hits > 0)
+                    return false;
+            }
+            else
+            {
+                double fxd = fx;
+                double fyd = fy;
+                double fzd = fz;
+
+                double searchMin[3];
+                searchMin[0] = fxd + 0.01;
+                searchMin[1] = fyd + 0.01;
+                searchMin[2] = fzd + 0.01;
+
+                fzd += theBrick->width;
+                fyd += theBrick->height;
+                fxd += theBrick->length;
+
+                double searchMax[3];
+                searchMax[0] = fxd - 0.01;
+                searchMax[1] = fyd - 0.01;
+                searchMax[2] = fzd - 0.01;
+
+                int hits = overlapTree->Search(searchMin,searchMax,StopAtFirstHit);
+                if(hits > 0)
+                    return false;
+            }
+        }
+
+        /*if(stopOverlaps)
+        {
             for(int x = 0; x<theBrick->width; x++)
             {
                 for(int z = 0; z<theBrick->length; z++)
@@ -1503,7 +1510,6 @@ bool unifiedWorld::addBrick(brick *theBrick,bool stopOverlaps,bool colliding,boo
                         {
                             if(tree->at(fx+x,fy+y,fz+z))
                             {
-                                //std::cout<<"Actual overlap "<<x<<"/"<<theBrick->width<<","<<y<<"/"<<theBrick->height<<","<<z<<"/"<<theBrick->length<<"\n";
                                 return false;
                             }
                         }
@@ -1511,16 +1517,41 @@ bool unifiedWorld::addBrick(brick *theBrick,bool stopOverlaps,bool colliding,boo
                         {
                             if(tree->at(fx+z,fy+y,fz+x))
                             {
-                                //std::cout<<"rot Actual overlap "<<x<<"/"<<theBrick->width<<","<<y<<"/"<<theBrick->height<<","<<z<<"/"<<theBrick->length<<"\n";
                                 return false;
                             }
                         }
                     }
                 }
             }
+        }*/
+
+        double insertMin[3];
+        double insertMax[3];
+
+        insertMin[0] = fx + 0.01;
+        insertMin[1] = fy + 0.01;
+        insertMin[2] = fz + 0.01;
+
+        if(theBrick->angleID % 2 == 0)
+        {
+            insertMax[0] = fx + theBrick->width;
+            insertMax[1] = fy + theBrick->height;
+            insertMax[2] = fz + theBrick->length;
+        }
+        else
+        {
+            insertMax[0] = fx + theBrick->length;
+            insertMax[1] = fy + theBrick->height;
+            insertMax[2] = fz + theBrick->width;
         }
 
-        for(int x = 0; x<theBrick->width; x++)
+        insertMax[0] -= 0.01;
+        insertMax[1] -= 0.01;
+        insertMax[2] -= 0.01;
+
+        overlapTree->Insert(insertMin,insertMax,theBrick);
+
+        /*for(int x = 0; x<theBrick->width; x++)
         {
             for(int z = 0; z<theBrick->length; z++)
             {
@@ -1535,7 +1566,7 @@ bool unifiedWorld::addBrick(brick *theBrick,bool stopOverlaps,bool colliding,boo
                         tree->set(fx+z,fy+y,fz+x,theBrick);
                 }
             }
-        }
+        }*/
     }
 
     /*if(colliding)
@@ -1611,7 +1642,33 @@ void unifiedWorld::clearBricks(clientData *source)
                 fx -= ((float)theBrick->length)/2.0 - (theBrick->xHalfPosition ? 0.5 : 0.0);
             }
 
-            for(int x = 0; x<theBrick->width; x++)
+            double insertMin[3];
+            double insertMax[3];
+
+            insertMin[0] = fx + 0.01;
+            insertMin[1] = fy + 0.01;
+            insertMin[2] = fz + 0.01;
+
+            if(theBrick->angleID % 2 == 0)
+            {
+                insertMax[0] = fx + theBrick->width;
+                insertMax[1] = fy + theBrick->height;
+                insertMax[2] = fz + theBrick->length;
+            }
+            else
+            {
+                insertMax[0] = fx + theBrick->length;
+                insertMax[1] = fy + theBrick->height;
+                insertMax[2] = fz + theBrick->width;
+            }
+
+            insertMax[0] -= 0.01;
+            insertMax[1] -= 0.01;
+            insertMax[2] -= 0.01;
+
+            overlapTree->Remove(insertMin,insertMax,theBrick);
+
+            /*for(int x = 0; x<theBrick->width; x++)
             {
                 for(int z = 0; z<theBrick->length; z++)
                 {
@@ -1630,7 +1687,7 @@ void unifiedWorld::clearBricks(clientData *source)
                         }
                     }
                 }
-            }
+            }*/
         }
 
         theServer->send(&data,true);
@@ -1660,11 +1717,11 @@ void unifiedWorld::removeBrick(brick *theBrick)
     if(!theBrick)
         return;
 
-    if(theBrick->builtBy != -1)
+    if(theBrick->builtBy != -1 && theBrick->builtBy != 0)
     {
         for(unsigned int a = 0; a<users.size(); a++)
         {
-            if(users[a]->playerID == (unsigned int)theBrick->builtBy)
+            if(users[a]->accountID == (unsigned int)theBrick->builtBy)
             {
                 for(unsigned int b = 0; b<users[a]->ownedBricks.size(); b++)
                 {
@@ -1712,7 +1769,33 @@ void unifiedWorld::removeBrick(brick *theBrick)
         fx -= ((float)theBrick->length)/2.0 - (theBrick->xHalfPosition ? 0.5 : 0.0);
     }
 
-    for(int x = 0; x<theBrick->width; x++)
+    double insertMin[3];
+    double insertMax[3];
+
+    insertMin[0] = fx + 0.01;
+    insertMin[1] = fy + 0.01;
+    insertMin[2] = fz + 0.01;
+
+    if(theBrick->angleID % 2 == 0)
+    {
+        insertMax[0] = fx + theBrick->width;
+        insertMax[1] = fy + theBrick->height;
+        insertMax[2] = fz + theBrick->length;
+    }
+    else
+    {
+        insertMax[0] = fx + theBrick->length;
+        insertMax[1] = fy + theBrick->height;
+        insertMax[2] = fz + theBrick->width;
+    }
+
+    insertMax[0] -= 0.01;
+    insertMax[1] -= 0.01;
+    insertMax[2] -= 0.01;
+
+    overlapTree->Remove(insertMin,insertMax,theBrick);
+
+    /*for(int x = 0; x<theBrick->width; x++)
     {
         for(int z = 0; z<theBrick->length; z++)
         {
@@ -1731,7 +1814,7 @@ void unifiedWorld::removeBrick(brick *theBrick)
                 }
             }
         }
-    }
+    }*/
 
     playSound("BrickBreak",theBrick->getX(),theBrick->getY(),theBrick->getZ(),false);
 
@@ -2309,7 +2392,7 @@ void unifiedWorld::loadBlocklandSave(std::string filePath)
     for(int a = 0; a<lines; a++)
         getline(bls,line);
 
-    colorSet.clear();
+    /*colorSet.clear();
     for(int a = 0; a<64; a++)
     {
         getline(bls,line);
@@ -2320,7 +2403,10 @@ void unifiedWorld::loadBlocklandSave(std::string filePath)
         color.b = atof(words[2].c_str());
         color.a = atof(words[3].c_str());
         colorSet.push_back(color);
-    }
+    }*/
+
+    for(int a = 0; a<64; a++)
+        getline(bls,line);
 
     getline(bls,line); //linecount
 

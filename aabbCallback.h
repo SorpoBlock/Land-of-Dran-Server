@@ -53,7 +53,7 @@ void clientDrewSelection(btVector3 start,btVector3 end,unifiedWorld *common,clie
 
         brick *theBrick = (brick*)obj->getUserPointer();
 
-        if(theBrick->builtBy != (int)source->playerID)
+        if(theBrick->builtBy != (int)source->accountID)
         {
             giveNotice = true;
             break;
@@ -87,7 +87,7 @@ void clientDrewSelection(btVector3 start,btVector3 end,unifiedWorld *common,clie
 
         brick *theBrick = (brick*)obj->getUserPointer();
 
-        if(theBrick->builtBy != (int)source->playerID)
+        if(theBrick->builtBy != (int)source->accountID)
             continue;
 
         brick *copyOfTheBrick = 0;
@@ -170,7 +170,7 @@ void clientDrewSelection(btVector3 start,btVector3 end,unifiedWorld *common,clie
                         continue;
 
                     brick *theBrick = (brick*)obj->getUserPointer();
-                    if(theBrick->builtBy != (int)source->playerID)
+                    if(theBrick->builtBy != (int)source->accountID)
                         continue;
                     common->removeBrick(theBrick);
                 }

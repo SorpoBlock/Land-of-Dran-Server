@@ -127,7 +127,14 @@ static int getNamedBrickIdx(lua_State *L)
     return 1;
 }
 
-/*static int getBrickAt(lua_State *L)
+brick *lastBrickAtHit = 0;
+bool getBrickAtSearch(brick *val)
+{
+    lastBrickAtHit = val;
+    return false;
+}
+
+static int getBrickAt(lua_State *L)
 {
     scope("getBrickAt");
 
@@ -141,8 +148,38 @@ static int getNamedBrickIdx(lua_State *L)
     x += brickTreeSize;
     z += brickTreeSize;
 
-    brick *result = common_lua->tree->at(x,y,z);
+    /*brick *result = common_lua->tree->at(x,y,z);
     if(!result)
+    {
+        lua_pushnil(L);
+        return 1;
+    }*/
+
+    double fxd = x;
+    double fyd = y;
+    double fzd = z;
+
+    double searchMin[3];
+    searchMin[0] = fxd + 0.01;
+    searchMin[1] = fyd + 0.01;
+    searchMin[2] = fzd + 0.01;
+
+    double searchMax[3];
+    searchMax[0] = fxd + 0.99;
+    searchMax[1] = fyd + 0.99;
+    searchMax[2] = fzd + 0.99;
+
+    lastBrickAtHit = 0;
+
+    int hits = common_lua->overlapTree->Search(searchMin,searchMax,getBrickAtSearch);
+
+    if(hits < 1)
+    {
+        lua_pushnil(L);
+        return 1;
+    }
+
+    if(!lastBrickAtHit)
     {
         lua_pushnil(L);
         return 1;
@@ -151,15 +188,15 @@ static int getNamedBrickIdx(lua_State *L)
     lua_newtable(L);
     lua_getglobal(L,"brickMETATABLE");
     lua_setmetatable(L,-2);
-    lua_pushinteger(L,result->serverID);
+    lua_pushinteger(L,lastBrickAtHit->serverID);
     lua_setfield(L,-2,"id");
-    lua_pushlightuserdata(L,result);
+    lua_pushlightuserdata(L,lastBrickAtHit);
     lua_setfield(L,-2,"pointer");
     lua_pushstring(L,"brick");
     lua_setfield(L,-2,"type");
 
     return 1;
-}*/
+}
 
 static int getBrickName(lua_State *L)
 {
@@ -305,7 +342,7 @@ static int getBrickOwner(lua_State *L)
         return 1;
     }
 
-    if(passedBrick->builtBy == -1)
+    if(passedBrick->builtBy == -1 || passedBrick->builtBy == 0)
     {
         lua_pushnil(L);
         return 1;
@@ -313,7 +350,7 @@ static int getBrickOwner(lua_State *L)
 
     for(unsigned int a = 0; a<common_lua->users.size(); a++)
     {
-        if(common_lua->users[a]->playerID == (unsigned int)passedBrick->builtBy)
+        if(common_lua->users[a]->accountID == (unsigned int)passedBrick->builtBy)
         {
             lua_newtable(L);
             lua_getglobal(L,"client");
@@ -505,7 +542,7 @@ void registerBrickFunctions(lua_State *L)
     lua_register(L,"getBrickIdx",getBrickIdx);
     lua_register(L,"getNumNamedBricks",getNumNamedBricks);
     lua_register(L,"getNamedBrickIdx",getNamedBrickIdx);
-    //lua_register(L,"getBrickAt",getBrickAt);
+    lua_register(L,"getBrickAt",getBrickAt);
 }
 
 

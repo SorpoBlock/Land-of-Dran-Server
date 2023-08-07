@@ -18,5 +18,6 @@ void clientPlantBrickEvent(clientData *source,brick *theBrick);
 void clientLeaveEvent(clientData *source);
 bool clientTryLoadCarEvent(clientData *source,brickCar *theCar,bool loadCarAsCar);
 bool clientChat(clientData *source,std::string &message);
+void clientJoin(clientData *source);
 
 #endif // EVENTS_H_INCLUDED

@@ -13,6 +13,9 @@
 #include "code/emitterStruct.h"
 #include "code/rope.h"
 #include <CURL/curl.h>
+#include "code/octree/RTree.h"
+
+typedef RTree<brick*,double,3> brickPointerTree;
 
 //#define bodyUserIndex_brick 55
 //#define bodyUserIndex_builtCar 66
@@ -29,7 +32,7 @@ extern "C" {
     #include <lauxlib.h>
 }
 
-#define hardCodedNetworkVersion 10008
+#define hardCodedNetworkVersion 10009
 
 struct clientData
 {
@@ -226,7 +229,8 @@ struct unifiedWorld
     std::vector<dynamic*> dynamics;
     std::vector<brick*> bricks;
     std::vector<brickNameVector> namedBricks;
-    Octree<brick*> *tree = 0;
+    //Octree<brick*> *tree = 0;
+    brickPointerTree *overlapTree = 0;
     std::vector<brickCar*> brickCars;
     std::vector<vec4> colorSet;
     std::vector<brick*> recentlyUpdatedBricks;

@@ -84,7 +84,7 @@ using namespace std::chrono;
 #define packetType_addRemoveRope 26
 #define packetType_addMessage 27
 #define packetType_setNodeColors 28
-#define packetType_otherAsset 29
+#define packetType_waterOrDecal 29
 #define packetType_newEmitterParticleType 30
 #define packetType_emitterAddRemove 31
 

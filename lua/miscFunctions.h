@@ -30,6 +30,57 @@ static int relWalkSpeed(lua_State *L)
     return 0;
 }
 
+static int setColorPalette(lua_State *L)
+{
+    scope("setColorPalette");
+
+    int args = lua_gettop(L);
+    if(args != 5)
+    {
+        error("Not enough arguments, expected setColorPallete(idx,r,g,b,a)");
+        return 0;
+    }
+
+    float a = lua_tonumber(L,-1);
+    lua_pop(L,1);
+    float b = lua_tonumber(L,-1);
+    lua_pop(L,1);
+    float g = lua_tonumber(L,-1);
+    lua_pop(L,1);
+    float r = lua_tonumber(L,-1);
+    lua_pop(L,1);
+
+    int idx = lua_tointeger(L,-1);
+    lua_pop(L,1);
+
+    if(idx < 0 || idx >= 64)
+    {
+        error("Invalid palette index must be between 0 and 63");
+        return 0;
+    }
+
+    common_lua->colorSet[idx].r = r;
+    common_lua->colorSet[idx].g = g;
+    common_lua->colorSet[idx].b = b;
+    common_lua->colorSet[idx].a = a;
+
+    packet data;
+    data.writeUInt(packetType_setColorPalette,packetTypeBits);
+    data.writeUInt(1,8);
+
+    int cr = common_lua->colorSet[idx].r*255;
+    int cg = common_lua->colorSet[idx].g*255;
+    int cb = common_lua->colorSet[idx].b*255;
+    int cal = common_lua->colorSet[idx].a*255;
+    data.writeUInt(idx,6);
+    data.writeUInt(cr,8);
+    data.writeUInt(cg,8);
+    data.writeUInt(cb,8);
+    data.writeUInt(cal,8);
+
+    common_lua->theServer->send(&data,true);
+}
+
 static int playSound(lua_State *L)
 {
     scope("playSound");
@@ -292,9 +343,12 @@ static int clearAllBricks(lua_State *L)
         common_lua->namedBricks[a].bricks.clear();
     common_lua->namedBricks.clear();
 
-    delete common_lua->tree;
+    /*delete common_lua->tree;
     common_lua->tree = new Octree<brick*>(brickTreeSize*2,0);
-    common_lua->tree->setEmptyValue(0);
+    common_lua->tree->setEmptyValue(0);*/
+
+    delete common_lua->overlapTree;
+    common_lua->overlapTree = new brickPointerTree;
 
     /*int bricksToRemove = common_lua->bricks.size();
     unsigned int bricksRemoved = 0;
@@ -494,6 +548,29 @@ static int loadBlocklandSave(lua_State *L)
     return 0;
 }
 
+static int setWaterLevel(lua_State *L)
+{
+    scope("setWaterLevel");
+
+    int args = lua_gettop(L);
+    if(args != 1)
+    {
+        error("Expected 1 argument, got: " + std::to_string(args));
+        return 0;
+    }
+
+    float level = lua_tonumber(L,-1);
+    lua_pop(L,1);
+
+    common_lua->waterLevel = level;
+
+    packet waterLevel;
+    waterLevel.writeUInt(packetType_waterOrDecal,packetTypeBits);
+    waterLevel.writeBit(true); //water, not decals
+    waterLevel.writeFloat(level);
+    common_lua->theServer->send(&waterLevel,true);
+}
+
 void bindMiscFuncs(lua_State *L)
 {
     lua_register(L,"echo",LUAecho);
@@ -507,6 +584,8 @@ void bindMiscFuncs(lua_State *L)
     lua_register(L,"clearAllBricks",clearAllBricks);
     lua_register(L,"loadBlocklandSave",loadBlocklandSave);
     lua_register(L,"loadLodSave",loadLodSave);
+    lua_register(L,"setColorPalette",setColorPalette);
+    lua_register(L,"setWaterLevel",setWaterLevel);
 }
 
 #endif // MISCFUNCTIONS_H_INCLUDED
