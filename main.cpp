@@ -129,6 +129,8 @@ size_t getLoginResponse(void *buffer,size_t size,size_t nmemb,void *userp)
 
 bool MySearchCallback(brick *value){ return false; }
 
+bool silent = false;
+
 int main(int argc, char *argv[])
 {
     int maxPlayersThisTime = 0;
@@ -147,6 +149,19 @@ int main(int argc, char *argv[])
     logger::setCallback(updateClientConsoles);
 
     info("Starting application...");
+
+    if(argc > 0)
+    {
+        info(argv[0]);
+        if(argc > 1)
+        {
+            if(std::string(argv[1]) == std::string("-silent"))
+            {
+                info("Silent mode activated.");
+                silent = true;
+            }
+        }
+    }
 
     preferenceFile settingsFile;
     settingsFile.importFromFile("config.txt");
@@ -179,99 +194,102 @@ int main(int argc, char *argv[])
 
     settingsFile.exportToFile("config.txt");
 
-    int loginInfoMagicNumber = 38398271;
-
-    std::ifstream loginInfo("loginInfo.bin",std::ios::binary);
-    if(loginInfo.is_open())
+    if(!silent)
     {
-        int magicNumber = 0;
-        loginInfo.read((char*)&magicNumber,sizeof(int));
-        if(magicNumber == loginInfoMagicNumber)
+        int loginInfoMagicNumber = 38398271;
+
+        std::ifstream loginInfo("loginInfo.bin",std::ios::binary);
+        if(loginInfo.is_open())
         {
-            //Actually get username
+            int magicNumber = 0;
             loginInfo.read((char*)&magicNumber,sizeof(int));
-            if(magicNumber > 0 && magicNumber < 256)
+            if(magicNumber == loginInfoMagicNumber)
             {
-                char nameBuf[256];
-
-                loginInfo.read(nameBuf,magicNumber);
-                nameBuf[magicNumber] = 0;
-                username = nameBuf;
-
-                //Get ID
+                //Actually get username
                 loginInfo.read((char*)&magicNumber,sizeof(int));
-                if(magicNumber < 0 || magicNumber > 255)
-                    error("Login info file existed but was invalid.");
-                else
+                if(magicNumber > 0 && magicNumber < 256)
                 {
+                    char nameBuf[256];
+
                     loginInfo.read(nameBuf,magicNumber);
                     nameBuf[magicNumber] = 0;
-                    keyID = nameBuf;
+                    username = nameBuf;
 
-                    //Get key
-                    loginInfo.read(nameBuf,40);
-                    nameBuf[40] = 0;
-                    key = nameBuf;
+                    //Get ID
+                    loginInfo.read((char*)&magicNumber,sizeof(int));
+                    if(magicNumber < 0 || magicNumber > 255)
+                        error("Login info file existed but was invalid.");
+                    else
+                    {
+                        loginInfo.read(nameBuf,magicNumber);
+                        nameBuf[magicNumber] = 0;
+                        keyID = nameBuf;
+
+                        //Get key
+                        loginInfo.read(nameBuf,40);
+                        nameBuf[40] = 0;
+                        key = nameBuf;
+                    }
                 }
+                else
+                    error("Login info file existed but was invalid.");
             }
             else
                 error("Login info file existed but was invalid.");
-        }
-        else
-            error("Login info file existed but was invalid.");
-        loginInfo.close();
-    }
-
-    if(username.length() < 1 || key.length() < 1 || keyID.length() < 1)
-    {
-        forceLogin:
-
-        info("No hosting key detected, please login to create one.");
-        info("Username: ");
-        std::cin>>username;
-        info("Password:");
-        std::string password;
-
-        bool keepGettingInput = true;
-        while(keepGettingInput)
-        {
-            char a = getch();
-            if(a == '\n' || a == '\r')
-                keepGettingInput = false;
-            else
-                password += a;
-        }
-
-        CURL *curlHandle = curl_easy_init();
-        curl_easy_setopt(curlHandle, CURLOPT_SSL_VERIFYPEER , 0);
-        curl_easy_setopt(curlHandle, CURLOPT_SSL_VERIFYHOST , 0);
-        curl_easy_setopt(curlHandle,CURLOPT_WRITEFUNCTION,getLoginResponse);
-        std::string url = "https://dran.land/getHostingKey.php";
-        std::string args = "pass=" + password + "&name=" + username;
-        curl_easy_setopt(curlHandle,CURLOPT_URL,url.c_str());
-        curl_easy_setopt(curlHandle,CURLOPT_POSTFIELDS,args.c_str());
-        CURLcode res = curl_easy_perform(curlHandle);
-        curl_easy_cleanup(curlHandle);
-
-        if(!loginOkay)
-            goto forceLogin;
-
-        std::ofstream loginInfo("loginInfo.bin",std::ios::binary);
-        if(loginInfo.is_open())
-        {
-            loginInfo.write((char*)&loginInfoMagicNumber,sizeof(int));
-
-            int nameLength = username.length();
-            loginInfo.write((char*)&nameLength,sizeof(int));
-            loginInfo.write(username.c_str(),username.length());
-
-            nameLength = keyID.length();
-            loginInfo.write((char*)&nameLength,sizeof(int));
-            loginInfo.write(keyID.c_str(),keyID.length());
-
-            loginInfo.write(key.c_str(),40);
-
             loginInfo.close();
+        }
+
+        if(username.length() < 1 || key.length() < 1 || keyID.length() < 1)
+        {
+            forceLogin:
+
+            info("No hosting key detected, please login to create one.");
+            info("Username: ");
+            std::cin>>username;
+            info("Password:");
+            std::string password;
+
+            bool keepGettingInput = true;
+            while(keepGettingInput)
+            {
+                char a = getch();
+                if(a == '\n' || a == '\r')
+                    keepGettingInput = false;
+                else
+                    password += a;
+            }
+
+            CURL *curlHandle = curl_easy_init();
+            curl_easy_setopt(curlHandle, CURLOPT_SSL_VERIFYPEER , 0);
+            curl_easy_setopt(curlHandle, CURLOPT_SSL_VERIFYHOST , 0);
+            curl_easy_setopt(curlHandle,CURLOPT_WRITEFUNCTION,getLoginResponse);
+            std::string url = "https://dran.land/getHostingKey.php";
+            std::string args = "pass=" + password + "&name=" + username;
+            curl_easy_setopt(curlHandle,CURLOPT_URL,url.c_str());
+            curl_easy_setopt(curlHandle,CURLOPT_POSTFIELDS,args.c_str());
+            CURLcode res = curl_easy_perform(curlHandle);
+            curl_easy_cleanup(curlHandle);
+
+            if(!loginOkay)
+                goto forceLogin;
+
+            std::ofstream loginInfo("loginInfo.bin",std::ios::binary);
+            if(loginInfo.is_open())
+            {
+                loginInfo.write((char*)&loginInfoMagicNumber,sizeof(int));
+
+                int nameLength = username.length();
+                loginInfo.write((char*)&nameLength,sizeof(int));
+                loginInfo.write(username.c_str(),username.length());
+
+                nameLength = keyID.length();
+                loginInfo.write((char*)&nameLength,sizeof(int));
+                loginInfo.write(keyID.c_str(),keyID.length());
+
+                loginInfo.write(key.c_str(),40);
+
+                loginInfo.close();
+            }
         }
     }
 
@@ -334,60 +352,6 @@ int main(int argc, char *argv[])
     registerEmitterFunctions(common.luaState);
     registerLightFunctions(common.luaState);
     addEventNames(common.luaState);
-
-    preferenceFile addonsList;
-    addonsList.importFromFile("add-ons/add-onsList.txt");
-
-    info("Loading add-ons...");
-    for (recursive_directory_iterator i("add-ons"), end; i != end; ++i)
-    {
-        if (!is_directory(i->path()))
-        {
-            if(i->path().filename() == "server.lua")
-            {
-                std::string addonName = i->path().parent_path().string();
-                if(addonName.substr(0,8) == "add-ons\\")
-                    addonName = addonName.substr(8,addonName.length() - 8);
-                if(addonName.find("\\") != std::string::npos)
-                {
-                    error("Not loading " + i->path().string() + " because it is nested!");
-                    continue;
-                }
-                if(common.luaState,i->path().string().length() < 1)
-                    continue;
-
-                if(addonsList.getPreference(addonName))
-                {
-                    if(!addonsList.getPreference(addonName)->toBool())
-                    {
-                        info(addonName + " disabled, skipping");
-                        continue;
-                    }
-                }
-                else
-                {
-                    info(addonName + " is new, enabling");
-                    addonsList.addBoolPreference(addonName,true);
-                }
-
-                info("Loading " + addonName);
-                if(luaL_dofile(common.luaState,i->path().string().c_str()))
-                {
-                    error("Lua error loading add-on " + addonName);
-                    if(lua_gettop(common.luaState) > 0)
-                    {
-                        const char* err = lua_tostring(common.luaState,-1);
-                        if(err)
-                            error(err);
-                        if(lua_gettop(common.luaState) > 0)
-                            lua_pop(common.luaState,1);
-                    }
-                }
-            }
-        }
-    }
-
-    addonsList.exportToFile("add-ons/add-onsList.txt");
 
     info("Loading decals");
     common.loadDecals("add-ons/decals");
@@ -469,6 +433,59 @@ int main(int argc, char *argv[])
     common.addMusicType("Analog","assets/sound/analog.wav");
     common.addMusicType("Drums","assets/sound/drums.wav");
 
+    preferenceFile addonsList;
+    addonsList.importFromFile("add-ons/add-onsList.txt");
+
+    info("Loading add-ons...");
+    for (recursive_directory_iterator i("add-ons"), end; i != end; ++i)
+    {
+        if (!is_directory(i->path()))
+        {
+            if(i->path().filename() == "server.lua")
+            {
+                std::string addonName = i->path().parent_path().string();
+                if(addonName.substr(0,8) == "add-ons\\")
+                    addonName = addonName.substr(8,addonName.length() - 8);
+                if(addonName.find("\\") != std::string::npos)
+                {
+                    error("Not loading " + i->path().string() + " because it is nested!");
+                    continue;
+                }
+                if(common.luaState,i->path().string().length() < 1)
+                    continue;
+
+                if(addonsList.getPreference(addonName))
+                {
+                    if(!addonsList.getPreference(addonName)->toBool())
+                    {
+                        info(addonName + " disabled, skipping");
+                        continue;
+                    }
+                }
+                else
+                {
+                    info(addonName + " is new, enabling");
+                    addonsList.addBoolPreference(addonName,true);
+                }
+
+                info("Loading " + addonName);
+                if(luaL_dofile(common.luaState,i->path().string().c_str()))
+                {
+                    error("Lua error loading add-on " + addonName);
+                    if(lua_gettop(common.luaState) > 0)
+                    {
+                        const char* err = lua_tostring(common.luaState,-1);
+                        if(err)
+                            error(err);
+                        if(lua_gettop(common.luaState) > 0)
+                            lua_pop(common.luaState,1);
+                    }
+                }
+            }
+        }
+    }
+
+    addonsList.exportToFile("add-ons/add-onsList.txt");
     /*for(unsigned int a = 0; a<5; a++)
     {
         item *i = common.addItem(hammerItem);
@@ -499,7 +516,7 @@ int main(int argc, char *argv[])
     unsigned int msAtLastUpdate = 0;
     while(cont)
     {
-        if(SDL_GetTicks() - lastMasterListPost > 60000*4)
+        if(!silent && (SDL_GetTicks() - lastMasterListPost > 60000*4))
         {
             lastMasterListPost = SDL_GetTicks();
 
@@ -516,7 +533,7 @@ int main(int argc, char *argv[])
             //curl_easy_setopt(masterServerPoster,CURLOPT_WRITEDATA,source);
             curl_easy_setopt(masterServerPoster,CURLOPT_WRITEFUNCTION,getHeartbeatResponse);
             std::string url = "https://dran.land/heartbeat.php";
-            std::string args = "key=" + key + "&id=" + keyID + "&players=" + std::to_string(common.users.size()) + "&maxplayers=30&mature=" + (common.mature?"1":"0") + "&servername=" + common.serverName;
+            std::string args = "key=" + key + "&id=" + keyID + "&players=" + std::to_string(common.users.size()) + "&maxplayers=30&mature=" + (common.mature?"1":"0") + "&servername=" + common.serverName + "&bricks=" + std::to_string(common.bricks.size());
             curl_easy_setopt(masterServerPoster,CURLOPT_URL,url.c_str());
             curl_easy_setopt(masterServerPoster,CURLOPT_POSTFIELDSIZE,args.length());
             curl_easy_setopt(masterServerPoster,CURLOPT_COPYPOSTFIELDS,args.c_str());

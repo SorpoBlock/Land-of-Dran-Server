@@ -610,11 +610,21 @@ static int getNumClientVehicles(lua_State *L)
         return 1;
     }
 
+    int accountID = -1;
+    for(int a = 0; a<common_lua->users.size(); a++)
+    {
+        if(common_lua->users[a]->playerID == id)
+        {
+            accountID = common_lua->users[a]->accountID;
+            break;
+        }
+    }
+
     int num = 0;
 
     for(unsigned int a = 0; a<common_lua->brickCars.size(); a++)
     {
-        if(common_lua->brickCars[a]->ownerID == id)
+        if(common_lua->brickCars[a]->ownerID == accountID)
         {
             num++;
         }

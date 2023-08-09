@@ -498,6 +498,151 @@ static int loadLodSave(lua_State *L)
     return 0;
 }
 
+static int saveBuild(lua_State *L)
+{
+    scope("saveBuild");
+
+    int args = lua_gettop(L);
+
+    if(args != 1)
+    {
+        error("This function must be called with 1 argument.");
+        return 0;
+    }
+
+    const char *filePath = lua_tostring(L,-1);
+    lua_pop(L,1);
+
+    if(!filePath)
+    {
+        error("Invalid string argument!");
+        return 0;
+    }
+
+    std::ofstream saveFile(filePath,std::ios::binary);
+
+    if(!saveFile.is_open())
+    {
+        error("Could not open save file for write!");
+        return 0;
+    }
+
+    float floatBuf = 0;
+    unsigned char charBuf = 0;
+    unsigned int uIntBuf = landOfDranBuildMagic;
+    saveFile.write((char*)&uIntBuf,sizeof(unsigned int));
+
+    uIntBuf = common_lua->bricks.size();
+    saveFile.write((char*)&uIntBuf,sizeof(unsigned int));
+
+    uIntBuf = common_lua->brickTypes->brickTypes.size();
+    saveFile.write((char*)&uIntBuf,sizeof(unsigned int));
+
+    for(int a = 0; a<common_lua->brickTypes->brickTypes.size(); a++)
+    {
+        std::string dbName = lowercase(getFileFromPath(common_lua->brickTypes->brickTypes[a]->fileName));
+        charBuf = dbName.length();
+        saveFile.write((char*)&charBuf,sizeof(unsigned char));
+        saveFile.write(dbName.c_str(),dbName.length());
+    }
+
+    int basic = 0;
+    int special = 0;
+    for(int a = 0; a<common_lua->bricks.size(); a++)
+    {
+        if(common_lua->bricks[a]->isSpecial)
+            special++;
+        else
+            basic++;
+    }
+
+    uIntBuf = basic;
+    saveFile.write((char*)&uIntBuf,sizeof(unsigned int));
+
+    for(int a = 0; a<common_lua->bricks.size(); a++)
+    {
+        if(common_lua->bricks[a]->isSpecial)
+            continue;
+
+        charBuf = common_lua->bricks[a]->r *= 255;
+        saveFile.write((char*)&charBuf,sizeof(unsigned char));
+        charBuf = common_lua->bricks[a]->g *= 255;
+        saveFile.write((char*)&charBuf,sizeof(unsigned char));
+        charBuf = common_lua->bricks[a]->b *= 255;
+        saveFile.write((char*)&charBuf,sizeof(unsigned char));
+        charBuf = common_lua->bricks[a]->a *= 255;
+        saveFile.write((char*)&charBuf,sizeof(unsigned char));
+
+        floatBuf = common_lua->bricks[a]->posX + (common_lua->bricks[a]->xHalfPosition ? 0.5 : 0.0);
+        saveFile.write((char*)&floatBuf,sizeof(float));
+        floatBuf = common_lua->bricks[a]->uPosY + (common_lua->bricks[a]->yHalfPosition ? 0.5 : 0.0);
+        floatBuf /= 2.5;
+        saveFile.write((char*)&floatBuf,sizeof(float));
+        floatBuf = common_lua->bricks[a]->posZ + (common_lua->bricks[a]->zHalfPosition ? 0.5 : 0.0);
+        saveFile.write((char*)&floatBuf,sizeof(float));
+
+        charBuf = common_lua->bricks[a]->width;
+        saveFile.write((char*)&charBuf,sizeof(unsigned char));
+        charBuf = common_lua->bricks[a]->height;
+        saveFile.write((char*)&charBuf,sizeof(unsigned char));
+        charBuf = common_lua->bricks[a]->length;
+        saveFile.write((char*)&charBuf,sizeof(unsigned char));
+        charBuf = common_lua->bricks[a]->printMask;
+        saveFile.write((char*)&charBuf,sizeof(unsigned char));
+
+        charBuf = common_lua->bricks[a]->angleID;
+        saveFile.write((char*)&charBuf,sizeof(unsigned char));
+        charBuf = common_lua->bricks[a]->material;
+        saveFile.write((char*)&charBuf,sizeof(unsigned char));
+    }
+
+    //Only client saving uses this:
+    uIntBuf = 0;
+    saveFile.write((char*)&uIntBuf,sizeof(unsigned int));
+
+    uIntBuf = special;
+    saveFile.write((char*)&uIntBuf,sizeof(unsigned int));
+
+    for(int a = 0; a<common_lua->bricks.size(); a++)
+    {
+        if(!common_lua->bricks[a]->isSpecial)
+            continue;
+
+        charBuf = common_lua->bricks[a]->r *= 255;
+        saveFile.write((char*)&charBuf,sizeof(unsigned char));
+        charBuf = common_lua->bricks[a]->g *= 255;
+        saveFile.write((char*)&charBuf,sizeof(unsigned char));
+        charBuf = common_lua->bricks[a]->b *= 255;
+        saveFile.write((char*)&charBuf,sizeof(unsigned char));
+        charBuf = common_lua->bricks[a]->a *= 255;
+        saveFile.write((char*)&charBuf,sizeof(unsigned char));
+
+        floatBuf = common_lua->bricks[a]->posX + (common_lua->bricks[a]->xHalfPosition ? 0.5 : 0.0);
+        saveFile.write((char*)&floatBuf,sizeof(float));
+        floatBuf = common_lua->bricks[a]->uPosY + (common_lua->bricks[a]->yHalfPosition ? 0.5 : 0.0);
+        floatBuf /= 2.5;
+        saveFile.write((char*)&floatBuf,sizeof(float));
+        floatBuf = common_lua->bricks[a]->posZ + (common_lua->bricks[a]->zHalfPosition ? 0.5 : 0.0);
+        saveFile.write((char*)&floatBuf,sizeof(float));
+
+        uIntBuf = common_lua->bricks[a]->typeID;
+        saveFile.write((char*)&uIntBuf,sizeof(unsigned int));
+
+        charBuf = common_lua->bricks[a]->angleID;
+        saveFile.write((char*)&charBuf,sizeof(unsigned char));
+        charBuf = common_lua->bricks[a]->material;
+        saveFile.write((char*)&charBuf,sizeof(unsigned char));
+    }
+
+    //Only client saving uses this:
+    uIntBuf = 0;
+    saveFile.write((char*)&uIntBuf,sizeof(unsigned int));
+
+    saveFile.close();
+
+    return 0;
+}
+
 static int loadBlocklandSave(lua_State *L)
 {
     scope("loadBlocklandSave");
@@ -584,6 +729,7 @@ void bindMiscFuncs(lua_State *L)
     lua_register(L,"clearAllBricks",clearAllBricks);
     lua_register(L,"loadBlocklandSave",loadBlocklandSave);
     lua_register(L,"loadLodSave",loadLodSave);
+    lua_register(L,"saveBuild",saveBuild);
     lua_register(L,"setColorPalette",setColorPalette);
     lua_register(L,"setWaterLevel",setWaterLevel);
 }

@@ -76,6 +76,15 @@ void brick::createUpdatePacket(packet *data)
     data->writeUInt(shapeFx,4);
     data->writeUInt(tmpMat,4);
     data->writeBit(isColliding());
+
+    /*if(printMask != 0 && printID != -1 && printName.length() > 0)
+    {
+        data->writeBit(true);
+        data->writeUInt(printMask,6);
+        data->writeString(printName);
+    }
+    else
+        data->writeBit(false);*/
 }
 
 void sayVec(btVector3 in)

@@ -110,7 +110,7 @@ static int brickCarGetOwner(lua_State *L)
 
     for(int a = 0; a<common_lua->users.size(); a++)
     {
-        if(common_lua->users[a]->playerID == ownerID)
+        if(common_lua->users[a]->accountID == ownerID)
         {
             //Register an instance of client
             lua_newtable(L);
@@ -171,6 +171,51 @@ static int brickCarGetVelocity(lua_State *L)
     return 3;
 }
 
+static int brickCarGetAngularVelocity(lua_State *L)
+{
+    scope("brickCarGetAngularVelocity");
+
+    lua_getfield(L, -1, "pointer");
+    brickCar *passedBrickCar = (brickCar*)lua_touserdata(L,-1);
+    lua_pop(L,2);
+
+    if(!passedBrickCar)
+    {
+        error("Brick car with empty pointer passed!");
+        return 0;
+    }
+
+    btVector3 pos = passedBrickCar->body->getAngularVelocity();
+
+    lua_pushnumber(L,pos.x());
+    lua_pushnumber(L,pos.y());
+    lua_pushnumber(L,pos.z());
+    return 3;
+}
+
+static int brickCarGetRotation(lua_State *L)
+{
+    scope("brickCarGetRotation");
+
+    lua_getfield(L, -1, "pointer");
+    brickCar *passedBrickCar = (brickCar*)lua_touserdata(L,-1);
+    lua_pop(L,2);
+
+    if(!passedBrickCar)
+    {
+        error("Brick car with empty pointer passed!");
+        return 0;
+    }
+
+    btQuaternion rot = passedBrickCar->body->getWorldTransform().getRotation();
+
+    lua_pushnumber(L,rot.w());
+    lua_pushnumber(L,rot.x());
+    lua_pushnumber(L,rot.y());
+    lua_pushnumber(L,rot.z());
+    return 4;
+}
+
 static int brickCarSetPosition(lua_State *L)
 {
     scope("brickCarSetPosition");
@@ -195,6 +240,32 @@ static int brickCarSetPosition(lua_State *L)
     btTransform t = passedBrickCar->body->getWorldTransform();
     t.setOrigin(btVector3(x,y,z));
     passedBrickCar->body->setWorldTransform(t);
+
+    return 0;
+}
+
+static int brickCarSetAngularVelocity(lua_State *L)
+{
+    scope("brickCarSetAngularVelocity");
+
+    float z = lua_tonumber(L,-1);
+    lua_pop(L,1);
+    float y = lua_tonumber(L,-1);
+    lua_pop(L,1);
+    float x = lua_tonumber(L,-1);
+    lua_pop(L,1);
+
+    lua_getfield(L, -1, "pointer");
+    brickCar *passedBrickCar = (brickCar*)lua_touserdata(L,-1);
+    lua_pop(L,2);
+
+    if(!passedBrickCar)
+    {
+        error("Brick car with empty pointer passed!");
+        return 0;
+    }
+
+    passedBrickCar->body->setAngularVelocity(btVector3(x,y,z));
 
     return 0;
 }
@@ -225,7 +296,63 @@ static int brickCarSetVelocity(lua_State *L)
     return 0;
 }
 
-static int brickCarGetBuilder(lua_State *L)
+static int brickCarSetGravity(lua_State *L)
+{
+    scope("brickCarSetGravity");
+
+    float z = lua_tonumber(L,-1);
+    lua_pop(L,1);
+    float y = lua_tonumber(L,-1);
+    lua_pop(L,1);
+    float x = lua_tonumber(L,-1);
+    lua_pop(L,1);
+
+    lua_getfield(L, -1, "pointer");
+    brickCar *passedBrickCar = (brickCar*)lua_touserdata(L,-1);
+    lua_pop(L,2);
+
+    if(!passedBrickCar)
+    {
+        error("Brick car with empty pointer passed!");
+        return 0;
+    }
+
+    passedBrickCar->body->setGravity(btVector3(x,y,z));
+
+    return 0;
+}
+
+static int brickCarSetRotation(lua_State *L)
+{
+    scope("brickCarSetRotation");
+
+    float z = lua_tonumber(L,-1);
+    lua_pop(L,1);
+    float y = lua_tonumber(L,-1);
+    lua_pop(L,1);
+    float x = lua_tonumber(L,-1);
+    lua_pop(L,1);
+    float w = lua_tonumber(L,-1);
+    lua_pop(L,1);
+
+    lua_getfield(L, -1, "pointer");
+    brickCar *passedBrickCar = (brickCar*)lua_touserdata(L,-1);
+    lua_pop(L,2);
+
+    if(!passedBrickCar)
+    {
+        error("Brick car with empty pointer passed!");
+        return 0;
+    }
+
+    btTransform t = passedBrickCar->body->getWorldTransform();
+    t.setRotation(btQuaternion(x,y,z,w));
+    passedBrickCar->body->setWorldTransform(t);
+
+    return 0;
+}
+
+/*static int brickCarGetBuilder(lua_State *L)
 {
     scope("brickCarGetBuilder");
 
@@ -255,7 +382,7 @@ static int brickCarGetBuilder(lua_State *L)
     lua_setfield(L,-2,"id");
 
     return 1;
-}
+}*/
 
 static int brickCarGetDriver(lua_State *L)
 {
@@ -303,6 +430,33 @@ static int brickCarGetDriver(lua_State *L)
     return 1;
 }
 
+static int getBrickcarOwnerID(lua_State *L)
+{
+    scope("getBrickcarOwnerID");
+
+    int args = lua_gettop(L);
+    if(args != 1)
+    {
+        error("Wrong amount of arguments!");
+        lua_pushnumber(L,0);
+        return 1;
+    }
+
+    lua_getfield(L, -1, "pointer");
+    brickCar *passedBrickCar = (brickCar*)lua_touserdata(L,-1);
+    lua_pop(L,2);
+
+    if(!passedBrickCar)
+    {
+        error("Invalid brick!");
+        lua_pushnumber(L,0);
+        return 1;
+    }
+
+    lua_pushnumber(L,passedBrickCar->ownerID);
+    return 1;
+}
+
 void registerBrickCarFunctions(lua_State *L)
 {
     //Register metatable for dynamic
@@ -314,8 +468,14 @@ void registerBrickCarFunctions(lua_State *L)
         {"getVelocity",brickCarGetVelocity},
         {"setVelocity",brickCarSetVelocity},
         {"setPosition",brickCarSetPosition},
-        {"getBuilder",brickCarGetBuilder},
+        {"getBuilder",brickCarGetOwner},
         {"getDriver",brickCarGetDriver},
+        {"getOwnerID",getBrickcarOwnerID},
+        {"setRotation",brickCarSetRotation},
+        {"setGravity",brickCarSetGravity},
+        {"setAngularVelocity",brickCarSetAngularVelocity},
+        {"getAngularVelocity",brickCarGetAngularVelocity},
+        {"getRotation",brickCarGetRotation},
         {NULL,NULL}};
     luaL_newmetatable(L,"brickCarMETATABLE");
     luaL_setfuncs(L,dynamicRegs,0);

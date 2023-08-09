@@ -13,7 +13,7 @@ void unregisterEvent(std::string eventName,std::string functionName);
 //bool indicates cancelled
 bool clientAdminOrb(clientData* source,bool startOrStop,float &x,float &y,float &z);
 bool spawnPlayerEvent(clientData *client,float &x,float &y,float &z,bool cancelled = false);
-void clientClickBrickEvent(clientData *source,brick *theBrick,float x,float y,float z);
+void clientClickBrickEvent(clientData *source,brick *theBrick,float x,float y,float z,bool isLeft);
 void clientPlantBrickEvent(clientData *source,brick *theBrick);
 void clientLeaveEvent(clientData *source);
 bool clientTryLoadCarEvent(clientData *source,brickCar *theCar,bool loadCarAsCar);

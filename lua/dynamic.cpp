@@ -430,7 +430,7 @@ static int setRestitution(lua_State *L)
 
 static int getPosition(lua_State *L)
 {
-    scope("setDynamicPositionLua");
+    scope("getDynamicPositionLua");
 
     lua_getfield(L, -1, "id");
     int id = lua_tointeger(L,-1);
@@ -466,6 +466,129 @@ static int getPosition(lua_State *L)
     lua_pushnil(L);
     lua_pushnil(L);
     return 3;
+}
+
+static int getVelocity(lua_State *L)
+{
+    scope("getDynamicVelocityLua");
+
+    lua_getfield(L, -1, "id");
+    int id = lua_tointeger(L,-1);
+    lua_pop(L,2);
+
+    if(id < 0)
+    {
+        error("bad id " + std::to_string(id));
+        lua_pushnil(L);
+        lua_pushnil(L);
+        lua_pushnil(L);
+        return 3;
+    }
+
+    for(unsigned int a = 0; a<common_lua->dynamics.size(); a++)
+    {
+        dynamic *d = common_lua->dynamics[a];
+        if(d)
+        {
+            if(d->serverID == id)
+            {
+                btVector3 vel = d->getLinearVelocity();
+                lua_pushnumber(L,vel.x());
+                lua_pushnumber(L,vel.y());
+                lua_pushnumber(L,vel.z());
+                return 3;
+            }
+        }
+    }
+
+    error("bad id " + std::to_string(id));
+    lua_pushnil(L);
+    lua_pushnil(L);
+    lua_pushnil(L);
+    return 3;
+}
+
+static int getAngularVelocity(lua_State *L)
+{
+    scope("getDynamicAngularVelocityLua");
+
+    lua_getfield(L, -1, "id");
+    int id = lua_tointeger(L,-1);
+    lua_pop(L,2);
+
+    if(id < 0)
+    {
+        error("bad id " + std::to_string(id));
+        lua_pushnil(L);
+        lua_pushnil(L);
+        lua_pushnil(L);
+        return 3;
+    }
+
+    for(unsigned int a = 0; a<common_lua->dynamics.size(); a++)
+    {
+        dynamic *d = common_lua->dynamics[a];
+        if(d)
+        {
+            if(d->serverID == id)
+            {
+                btVector3 vel = d->getAngularVelocity();
+                lua_pushnumber(L,vel.x());
+                lua_pushnumber(L,vel.y());
+                lua_pushnumber(L,vel.z());
+                return 3;
+            }
+        }
+    }
+
+    error("bad id " + std::to_string(id));
+    lua_pushnil(L);
+    lua_pushnil(L);
+    lua_pushnil(L);
+    return 3;
+}
+
+static int getRotation(lua_State *L)
+{
+    scope("getDynamicRotation");
+
+    lua_getfield(L, -1, "id");
+    int id = lua_tointeger(L,-1);
+    lua_pop(L,2);
+
+    if(id < 0)
+    {
+        error("bad id " + std::to_string(id));
+        lua_pushnil(L);
+        lua_pushnil(L);
+        lua_pushnil(L);
+        lua_pushnil(L);
+        return 4;
+    }
+
+    for(unsigned int a = 0; a<common_lua->dynamics.size(); a++)
+    {
+        dynamic *d = common_lua->dynamics[a];
+        if(d)
+        {
+            if(d->serverID == id)
+            {
+                btQuaternion quat = d->getWorldTransform().getRotation();
+                lua_pushnumber(L,quat.w());
+                lua_pushnumber(L,quat.x());
+                lua_pushnumber(L,quat.y());
+                lua_pushnumber(L,quat.z());
+                return 4;
+            }
+        }
+    }
+
+    error("bad id " + std::to_string(id));
+    lua_pushnil(L);
+    lua_pushnil(L);
+    lua_pushnil(L);
+    lua_pushnil(L);
+    return 4;
 }
 
 static int getNumDynamics(lua_State *L)
@@ -753,6 +876,46 @@ static int attachByHinge(lua_State *L)
     common_lua->physicsWorld->addConstraint(h);
 }
 
+static int getHeldTool(lua_State *L)
+{
+    scope("getHeldTool");
+
+    int args = lua_gettop(L);
+    if(args != 1)
+    {
+        lua_pop(L,args);
+        error("Function expected 1 argument!");
+        lua_pushnil(L);
+        return 1;
+    }
+
+    lua_getfield(L, -1, "id");
+    int ida = lua_tointeger(L,-1);
+    lua_pop(L,2);
+
+    for(int i = 0; i<common_lua->dynamics.size(); i++)
+    {
+        if(common_lua->dynamics[i]->serverID == ida)
+        {
+            dynamic *d = common_lua->dynamics[i];
+            if(d->lastHeldSlot == -1 || d->lastHeldSlot < 0 || d->lastHeldSlot >= inventorySize)
+                lua_pushnil(L);
+            else
+            {
+                if(!d->holding[d->lastHeldSlot])
+                    lua_pushnil(L);
+                else
+                    lua_pushstring(L,d->holding[d->lastHeldSlot]->heldItemType->uiName.c_str());
+            }
+            return 1;
+        }
+    }
+
+    error("No dynamic found!");
+    lua_pushnil(L);
+    return 1;
+}
+
 void registerDynamicFunctions(lua_State *L)
 {
     //Register metatable for dynamic
@@ -772,6 +935,10 @@ void registerDynamicFunctions(lua_State *L)
         {"setNodeColor",setNodeColor},
         {"attachByRope",attachByRope},
         {"attachByHinge",attachByHinge},
+        {"getVelocity",getVelocity},
+        {"getAngularVelocity",getAngularVelocity},
+        {"getRotation",getRotation},
+        {"getHeldTool",getHeldTool},
         {NULL,NULL}};
     luaL_newmetatable(L,"dynamic");
     luaL_setfuncs(L,dynamicRegs,0);

@@ -16,6 +16,8 @@ struct light
     btVector3 offset = btVector3(0,0,0);
     btVector3 color = btVector3(0,0,0);
     btVector4 direction = btVector4(0,0,0,0); //w = angle phi
+    btVector3 blinkVel = btVector3(0,0,0);
+    float yawVel = 0.0;
     bool isSpotlight = false;
 
     int lifeTimeMS = 0;

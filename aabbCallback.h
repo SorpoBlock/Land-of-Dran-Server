@@ -73,7 +73,7 @@ void clientDrewSelection(btVector3 start,btVector3 end,unifiedWorld *common,clie
     }
 
     brickCar *car = new brickCar;
-    car->ownerID = source->playerID;
+    car->ownerID = source->accountID;
     int additionalCarBricks = 0;
 
     for(unsigned int a = 0; a<callback.results.size(); a++)

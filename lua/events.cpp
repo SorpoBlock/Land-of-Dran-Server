@@ -611,7 +611,7 @@ void clientPlantBrickEvent(clientData *source,brick *theBrick)
     }
 }
 
-void clientClickBrickEvent(clientData *source,brick *theBrick,float x,float y,float z)
+void clientClickBrickEvent(clientData *source,brick *theBrick,float x,float y,float z,bool isLeft)
 {
     //Maybe I should just have the event as a global variable...
     eventListener *event = 0;
@@ -665,7 +665,9 @@ void clientClickBrickEvent(clientData *source,brick *theBrick,float x,float y,fl
             lua_pushnumber(common_lua->luaState,y);
             lua_pushnumber(common_lua->luaState,z);
 
-            if(lua_pcall(common_lua->luaState,5,0,0))
+            lua_pushboolean(common_lua->luaState,isLeft);
+
+            if(lua_pcall(common_lua->luaState,6,0,0))
             {
                 error("Error in lua call to event listener function " + event->functionNames[a] + " for event " + event->eventName);
                 if(lua_gettop(common_lua->luaState) > 0)

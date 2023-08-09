@@ -1573,6 +1573,7 @@ bool unifiedWorld::addBrick(brick *theBrick,bool stopOverlaps,bool colliding,boo
         brickTypes->addPhysicsToBrick(theBrick,physicsWorld);
     else
         theBrick->body = 0;*/
+
     brickTypes->addPhysicsToBrick(theBrick,physicsWorld);
     if(!colliding)
         theBrick->setColliding(physicsWorld,false);
@@ -1717,7 +1718,7 @@ void unifiedWorld::removeBrick(brick *theBrick)
     if(!theBrick)
         return;
 
-    if(theBrick->builtBy != -1 && theBrick->builtBy != 0)
+    if(theBrick->builtBy != -1)
     {
         for(unsigned int a = 0; a<users.size(); a++)
         {
@@ -1953,8 +1954,6 @@ void unifiedWorld::removeDynamic(dynamic *toRemove,bool dontSendPacket)
     }
 }
 
-#define landOfDranBuildMagic 16483534
-
 void unifiedWorld::loadLodSave(std::string filePath)
 {
     int start = SDL_GetTicks();
@@ -1981,6 +1980,7 @@ void unifiedWorld::loadLodSave(std::string filePath)
     }
 
     bls.read((char*)&uIntBuf,sizeof(unsigned int));
+    int toLoad = uIntBuf;
     info("Loading " + std::to_string(uIntBuf) + " bricks...");
 
     bls.read((char*)&uIntBuf,sizeof(unsigned int));
@@ -2116,6 +2116,12 @@ void unifiedWorld::loadLodSave(std::string filePath)
 
         addBrick(tmp,false,true,false);
         brickCount++;
+
+        if(brickCount > toLoad)
+        {
+            error("Loaded too many bricks? OB val: " + std::to_string(opaqueBasicBricks));
+            break;
+        }
     }
 
     bls.read((char*)&uIntBuf,sizeof(unsigned int));
@@ -2196,6 +2202,12 @@ void unifiedWorld::loadLodSave(std::string filePath)
 
         addBrick(tmp,false,true,false);
         brickCount++;
+
+        if(brickCount > toLoad)
+        {
+            error("Loaded too many bricks? TB val: " + std::to_string(transparentBasicBricks));
+            break;
+        }
     }
 
     bls.read((char*)&uIntBuf,sizeof(unsigned int));
@@ -2224,7 +2236,7 @@ void unifiedWorld::loadLodSave(std::string filePath)
         if(saveTypeID >= saveToServerBrickTypeIDs.size())
         {
             error("os Brick had save type index of " + std::to_string(saveTypeID)+", error in save file? Brick: " + std::to_string(brickCount));
-            continue;
+            break;
         }
 
         int typeID = saveToServerBrickTypeIDs[saveTypeID];
@@ -2279,6 +2291,12 @@ void unifiedWorld::loadLodSave(std::string filePath)
 
         addBrick(tmp,false,true,false);
         brickCount++;
+
+        if(brickCount > toLoad)
+        {
+            error("Loaded too many bricks? OS val: " + std::to_string(opaqueSpecialBricks));
+            break;
+        }
     }
 
 
@@ -2363,6 +2381,12 @@ void unifiedWorld::loadLodSave(std::string filePath)
 
         addBrick(tmp,false,true,false);
         brickCount++;
+
+        if(brickCount > toLoad)
+        {
+            error("Loaded too many bricks? TS val: " + std::to_string(transparentSpecialBricks));
+            break;
+        }
     }
 
     bls.close();

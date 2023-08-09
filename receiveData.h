@@ -198,6 +198,13 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
             if(chat.length() > 200)
                 chat = chat.substr(0,200);
 
+            replaceAll(chat,"[","\\[");
+
+            if(chat[0] == '>')
+                chat = "[colour='FF00FF00']" + chat;
+            if(chat[0] == '<')
+                chat = "[colour='FFFF0000']" + chat;
+
             bool cancelled = clientChat(source,chat);
 
             if(cancelled)
@@ -215,6 +222,7 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
             {
                 source->lastChatMessage = SDL_GetTicks();
                 common->messageAll("[colour='FFFFFF00']" + source->name + "[colour='FFFFFFFF']: " + chat,"chat");
+                info(source->name + ": " + chat);
             }
 
             return;
@@ -228,7 +236,7 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
             //Main loop will clear out partial loads after a while:
             source->carLoadStartTime = SDL_GetTicks();
 
-            source->loadingCar->ownerID = source->playerID;
+            source->loadingCar->ownerID = source->accountID;
 
             int packetSubType = data->readUInt(3);
 
@@ -708,6 +716,10 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                     source->lastWrenchedBrick->attachedLight->direction.setX(cos(lightPitch) * sin(yaw));
                     source->lastWrenchedBrick->attachedLight->direction.setY(sin(lightPitch));
                     source->lastWrenchedBrick->attachedLight->direction.setZ(cos(lightPitch) * cos(yaw));
+
+                    /*source->lastWrenchedBrick->attachedLight->direction.setX(sin(yaw));
+                    source->lastWrenchedBrick->attachedLight->direction.setY(sin(lightPitch));
+                    source->lastWrenchedBrick->attachedLight->direction.setZ(cos(yaw));*/
                 }
 
                 for(int a = 0; a<common->users.size(); a++)
@@ -807,11 +819,6 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                 invSlot = -1;
             }
 
-            btVector3 raystart = btVector3(camX,camY,camZ);
-            btVector3 rayend = raystart + btVector3(dirX,dirY,dirZ) * 30.0;
-            btCollisionWorld::AllHitsRayResultCallback res(raystart,rayend);
-            common->physicsWorld->rayTest(raystart,rayend,res);
-
             if(!isLeft)
             {
                 if(source->driving && source->controlling) //dismount vehicle get out of car
@@ -838,6 +845,15 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                 }
             }
 
+            btVector3 raystart = btVector3(camX,camY,camZ);
+            btVector3 rayend = raystart + btVector3(dirX,dirY,dirZ) * 30.0;
+            btCollisionWorld::AllHitsRayResultCallback res(raystart,rayend);
+            common->physicsWorld->rayTest(raystart,rayend,res);
+
+            btRigidBody *closest = 0;
+            float closestDist = 999999;
+            btVector3 clickPos;
+
             for(int a = 0; a<res.m_collisionObjects.size(); a++)
             {
                 if(source->cameraTarget)
@@ -845,128 +861,126 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                     if(res.m_collisionObjects[a] == source->cameraTarget)
                         continue;
                 }
+
                 if(source->controlling)
                 {
                     if(res.m_collisionObjects[a] == source->controlling)
                         continue;
                 }
-                else
-                    continue;
 
-                btRigidBody *body = (btRigidBody*)res.m_collisionObjects[a];
-                if(!body)
-                    continue;
-
-                btVector3 clickPos = res.m_hitPointWorld[a];
-
-                if(body->getUserIndex() == bodyUserIndex_brick)
+                if(closest == 0 || ((res.m_hitPointWorld[a] - raystart).length() < closestDist))
                 {
-                    if(!body->getUserPointer())
-                        continue;
-
-                    clientClickBrickEvent(source,(brick*)body->getUserPointer(),clickPos.x(),clickPos.y(),clickPos.z());
+                    closestDist = (res.m_hitPointWorld[a] - raystart).length();
+                    closest = (btRigidBody*)res.m_collisionObjects[a];
+                    clickPos = res.m_hitPointWorld[a];
                 }
-                else if(body->getUserIndex() == bodyUserIndex_item)
+            }
+
+            if(!closest)
+                return;
+
+            btRigidBody *body = closest;
+
+            if(body->getUserIndex() == bodyUserIndex_brick)
+            {
+                if(!body->getUserPointer())
+                    return;
+
+                clientClickBrickEvent(source,(brick*)body->getUserPointer(),clickPos.x(),clickPos.y(),clickPos.z(),isLeft);
+            }
+            else if(body->getUserIndex() == bodyUserIndex_item)
+            {
+                if(!body->getUserPointer())
+                    return;
+
+                item *i = (item*)body->getUserPointer();
+
+                int freeSlot = -1;
+                for(unsigned int a = 0; a<inventorySize; a++)
                 {
-                    if(!body->getUserPointer())
-                        continue;
-
-                    item *i = (item*)body->getUserPointer();
-
-                    int freeSlot = -1;
-                    for(unsigned int a = 0; a<inventorySize; a++)
+                    if(!source->controlling->holding[a])
                     {
-                        if(!source->controlling->holding[a])
-                        {
-                            freeSlot = a;
-                            break;
-                        }
+                        freeSlot = a;
+                        break;
                     }
-
-                    if(freeSlot == -1)
-                        continue;
-
-                    common->pickUpItem(source->controlling,i,freeSlot,source);
-                    common->playSound("Beep",clickPos.x(),clickPos.y(),clickPos.z(),false);
-
-
-                    /*i->heldBy = source->controlling;
-                    i->switchedHolder = true;
-                    common->physicsWorld->removeRigidBody(i);
-                    source->controlling->holding = i;
-                    i->lastFire = SDL_GetTicks() + 200;*/
-
-                    continue;
                 }
-                else if(body->getUserIndex() == bodyUserIndex_builtCar)
+
+                if(freeSlot == -1)
+                    return;
+
+                common->pickUpItem(source->controlling,i,freeSlot,source);
+                common->playSound("Beep",clickPos.x(),clickPos.y(),clickPos.z(),false);
+
+                return;
+            }
+            else if(body->getUserIndex() == bodyUserIndex_builtCar)
+            {
+                if(!body->getUserPointer())
+                    return;
+                brickCar *car = (brickCar*)body->getUserPointer();
+
+                if(!isLeft)
                 {
-                    if(!body->getUserPointer())
-                        continue;
-                    brickCar *car = (brickCar*)body->getUserPointer();
-
-                    if(!isLeft)
-                    {
-                        if(car->occupied)
-                            continue;
-
-                        car->occupied = true;
-                        source->driving = car;
-                        source->controlling->sittingOn = car->body;
-                        source->controlling->oldCollisionFlags = source->controlling->getCollisionFlags();
-                        source->controlling->setCollisionFlags(btCollisionObject::CF_NO_CONTACT_RESPONSE);
-                        car->body->activate();
-
-                        packet giveUpPlayerControl;
-                        giveUpPlayerControl.writeUInt(packetType_clientPhysicsData,packetTypeBits);
-                        giveUpPlayerControl.writeUInt(1,2); //subtype 1, resume client physics control
-                        client->send(&giveUpPlayerControl,true);
-
-                        //source->cameraTarget = car->body;
-                        source->sendCameraDetails();
-                        common->playSound("PlayerMount",raystart.x(),raystart.y(),raystart.z(),false);
+                    if(car->occupied)
                         return;
-                    }
-                    else
+
+                    car->occupied = true;
+                    source->driving = car;
+                    source->controlling->sittingOn = car->body;
+                    source->controlling->oldCollisionFlags = source->controlling->getCollisionFlags();
+                    source->controlling->setCollisionFlags(btCollisionObject::CF_NO_CONTACT_RESPONSE);
+                    car->body->activate();
+
+                    packet giveUpPlayerControl;
+                    giveUpPlayerControl.writeUInt(packetType_clientPhysicsData,packetTypeBits);
+                    giveUpPlayerControl.writeUInt(1,2); //subtype 1, resume client physics control
+                    client->send(&giveUpPlayerControl,true);
+
+                    //source->cameraTarget = car->body;
+                    source->sendCameraDetails();
+                    common->playSound("PlayerMount",raystart.x(),raystart.y(),raystart.z(),false);
+                    return;
+                }
+                else
+                {
+                    if(invSlot != -1)
                     {
-                        if(invSlot != -1)
+                        if(source->controlling->holding[invSlot])
                         {
-                            if(source->controlling->holding[invSlot])
+                            if(source->controlling->holding[invSlot]->heldItemType)
                             {
-                                if(source->controlling->holding[invSlot]->heldItemType)
+                                if(source->controlling->holding[invSlot]->heldItemType->uiName == "Wrench")
                                 {
-                                    if(source->controlling->holding[invSlot]->heldItemType->uiName == "Wrench")
-                                    {
-                                        return;
-                                    }
+                                    return;
                                 }
                             }
                         }
-
-                        if(car->ownerID == source->playerID || source->hasLuaAccess)
-                        {
-                            //btVector3 relPos = car->body->getWorldTransform().getOrigin() - res.m_hitNormalWorld[a];
-                            //car->body->applyImpulse(8.0 * btVector3(dirX,-dirY,dirZ),relPos);
-                            //car->body->applyCentralImpulse(pow(car->mass,0.8) * 15.0 * btVector3(dirX,-dirY,dirZ));
-
-                            btTransform t = car->body->getWorldTransform();
-                            //t.setRotation(btQuaternion().getIdentity());
-
-                            t.setRotation(btQuaternion(debugYaw,0,0));
-                            debugYaw += 0.78539816339;
-                            if(debugYaw >= 6.28318530718)
-                                debugYaw -= 0;
-
-                            btVector3 o = t.getOrigin();
-                            o.setY(o.getY() + car->halfExtents.y() + 5);
-                            t.setOrigin(o);
-
-                            car->body->setWorldTransform(t);
-                            car->body->setLinearVelocity(btVector3(0,0,0));
-                            car->body->setAngularVelocity(btVector3(0,0,0));
-                        }
-
-                        return;
                     }
+
+                    if(car->ownerID == source->accountID || source->hasLuaAccess)
+                    {
+                        //btVector3 relPos = car->body->getWorldTransform().getOrigin() - res.m_hitNormalWorld[a];
+                        //car->body->applyImpulse(8.0 * btVector3(dirX,-dirY,dirZ),relPos);
+                        //car->body->applyCentralImpulse(pow(car->mass,0.8) * 15.0 * btVector3(dirX,-dirY,dirZ));
+
+                        btTransform t = car->body->getWorldTransform();
+                        //t.setRotation(btQuaternion().getIdentity());
+
+                        t.setRotation(btQuaternion(debugYaw,0,0));
+                        debugYaw += 0.78539816339;
+                        if(debugYaw >= 6.28318530718)
+                            debugYaw -= 0;
+
+                        btVector3 o = t.getOrigin();
+                        o.setY(o.getY() + car->halfExtents.y() + 5);
+                        t.setOrigin(o);
+
+                        car->body->setWorldTransform(t);
+                        car->body->setLinearVelocity(btVector3(0,0,0));
+                        car->body->setAngularVelocity(btVector3(0,0,0));
+                    }
+
+                    return;
                 }
             }
 
@@ -1286,7 +1300,7 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                             if(body->getUserPointer())
                             {
                                 brick *theBrick = (brick*)body->getUserPointer();
-                                if(theBrick->builtBy == (int)source->accountID)
+                                if(theBrick->builtBy == (int)source->accountID || theBrick->builtBy == 0)
                                 {
                                     common->setBrickColor(theBrick,paintColor.x(),paintColor.y(),paintColor.z(),paintColor.w());
                                     return;
@@ -1400,7 +1414,7 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                                         if(body->getUserPointer())
                                         {
                                             brick *theBrick = (brick*)body->getUserPointer();
-                                            if(theBrick->builtBy == (int)source->accountID)
+                                            if(theBrick->builtBy == (int)source->accountID || theBrick->builtBy == 0)
                                             {
                                                 common->removeBrick(theBrick);
                                                 return;
@@ -1432,7 +1446,7 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                                     if(body->getUserIndex() == bodyUserIndex_brick && body->getUserPointer())
                                     {
                                         brick *theBrick = (brick*)body->getUserPointer();
-                                        if((unsigned)theBrick->builtBy == source->accountID || source->hasLuaAccess)
+                                        if((unsigned)theBrick->builtBy == source->accountID || source->hasLuaAccess || theBrick->builtBy == 0)
                                         {
                                             common->playSound("WrenchHit",rayend.x(),rayend.y(),rayend.z(),false);
                                             source->lastWrenchedBrick = theBrick;
@@ -1518,7 +1532,7 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                                         }
                                         else
                                         {
-                                            source->bottomPrint("This brick was built by ID" + std::to_string(theBrick->builtBy) + "!",4000);
+                                            source->bottomPrint("This brick was built by ID " + std::to_string(theBrick->builtBy) + "!",4000);
                                         }
                                     }
                                     else if(body->getUserIndex() == bodyUserIndex_builtCar && body->getUserPointer())

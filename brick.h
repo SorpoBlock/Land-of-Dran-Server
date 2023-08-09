@@ -18,6 +18,8 @@ using namespace std::filesystem;
 #define bodyUserIndex_brick 55
 #define bodyUserIndex_builtCar 66
 
+#define landOfDranBuildMagic 16483534
+
 enum faceDirection{FACE_UP=0,FACE_DOWN=1,FACE_NORTH=2,FACE_SOUTH=3,FACE_EAST=4,FACE_WEST=5,FACE_OMNI=6};
 enum brickMaterial{none=0,tempBrickEffect=1,undulo=1000,bob=2000,peral=2,chrome=3,glow=4,blink=5,swirl=6,rainbow=7,slippery=8};
 

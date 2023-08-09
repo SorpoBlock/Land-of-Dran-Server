@@ -491,6 +491,42 @@ static int setBrickPosition(lua_State *L)
     return 0;
 }
 
+static int setBrickName(lua_State *L)
+{
+    scope("setBrickName");
+
+    int args = lua_gettop(L);
+    if(args != 2)
+    {
+        error("Function requires 2 arguments!");
+        lua_pop(L,args);
+        return 0;
+    }
+
+    const char *str = lua_tostring(L,-1);
+    lua_pop(L,1);
+
+    if(!str)
+    {
+        error("Invalid string argument!");
+        return 0;
+    }
+
+    lua_getfield(L, -1, "pointer");
+    brick *passedBrick = (brick*)lua_touserdata(L,-1);
+    lua_pop(L,2);
+
+    if(!passedBrick)
+    {
+        error("Brick with empty pointer passed!");
+        return 0;
+    }
+
+    common_lua->setBrickName(passedBrick,std::string(str));
+
+    return 0;
+}
+
 static int setBrickAngleID(lua_State *L)
 {
     scope("setBrickAngleID");
@@ -513,12 +549,362 @@ static int setBrickAngleID(lua_State *L)
     return 0;
 }
 
+static int addBasicBrickLua(lua_State *L)
+{
+    scope("addBasicBrick");
+
+    int args = lua_gettop(L);
+
+    if(args != 12)
+    {
+        error("This function requires 12 arguments.");
+        error("addBasicBrick(x,y,z,r,g,b,a,width,length,height,angleID,material");
+        lua_pushnil(L);
+        return 1;
+    }
+
+    int material = lua_tointeger(L,-1);
+    lua_pop(L,1);
+
+    int angleID = lua_tointeger(L,-1);
+    lua_pop(L,1);
+
+    int height = lua_tointeger(L,-1);
+    lua_pop(L,1);
+    int length = lua_tointeger(L,-1);
+    lua_pop(L,1);
+    int width = lua_tointeger(L,-1);
+    lua_pop(L,1);
+
+    if(length < 1 || width < 1 || height < 1)
+    {
+        error("A dimension was zero or negative!");
+        lua_pushnil(L);
+        return 1;
+    }
+    if(length > 255 || width > 255 || height > 255)
+    {
+        error("A dimension was greater than 255!");
+        lua_pushnil(L);
+        return 1;
+    }
+    if(angleID < 0 || angleID > 3)
+    {
+        error("AngleID was not between 0 and 3!");
+        lua_pushnil(L);
+        return 1;
+    }
+
+    float al = lua_tonumber(L,-1);
+    lua_pop(L,1);
+    float b = lua_tonumber(L,-1);
+    lua_pop(L,1);
+    float g = lua_tonumber(L,-1);
+    lua_pop(L,1);
+    float r = lua_tonumber(L,-1);
+    lua_pop(L,1);
+
+    float z = lua_tonumber(L,-1);
+    lua_pop(L,1);
+    float y = lua_tonumber(L,-1);
+    lua_pop(L,1);
+    float x = lua_tonumber(L,-1);
+    lua_pop(L,1);
+
+    brick *tmp = new brick;
+    tmp->isSpecial = false;
+
+    tmp->posX = x;
+    tmp->uPosY = y;
+    tmp->posZ = z;
+
+    tmp->yHalfPosition = height % 2;
+    if(angleID % 2 == 0)
+    {
+        tmp->xHalfPosition = width % 2;
+        tmp->zHalfPosition = length % 2;
+    }
+    else
+    {
+        tmp->zHalfPosition = width % 2;
+        tmp->xHalfPosition = length % 2;
+    }
+
+    tmp->r = r;
+    tmp->g = g;
+    tmp->b = b;
+    tmp->a = al;
+
+    tmp->angleID = angleID;
+    tmp->material = material;
+
+    tmp->width = width;
+    tmp->length = length;
+    tmp->height = height;
+
+    if(!common_lua->addBrick(tmp,false,true,true))
+    {
+        delete tmp;
+        lua_pushnil(L);
+        return 1;
+    }
+
+    //Register an instance of brick
+    lua_newtable(L);
+    lua_getglobal(L,"brickMETATABLE");
+    lua_setmetatable(L,-2);
+    lua_pushinteger(L,tmp->serverID);
+    lua_setfield(L,-2,"id");
+    lua_pushlightuserdata(L,tmp);
+    lua_setfield(L,-2,"pointer");
+    lua_pushstring(L,"brick");
+    lua_setfield(L,-2,"type");
+
+    return 1;
+}
+
+static int addSpecialBrickLua(lua_State *L)
+{
+    scope("addSpecialBrick");
+
+    int args = lua_gettop(L);
+
+    if(args != 10)
+    {
+        error("This function requires 10 arguments.");
+        error("addBasicBrick(x,y,z,r,g,b,a,typeID,angleID,material");
+        lua_pushnil(L);
+        return 1;
+    }
+
+    int material = lua_tointeger(L,-1);
+    lua_pop(L,1);
+    int angleID = lua_tointeger(L,-1);
+    lua_pop(L,1);
+
+    int typeID = lua_tointeger(L,-1);
+    lua_pop(L,1);
+
+    if(typeID < 0)
+    {
+        error("TypeID < 0");
+        lua_pushnil(L);
+        return 1;
+    }
+    if(typeID >= common_lua->brickTypes->brickTypes.size())
+    {
+        error("TypeID out of range!");
+        lua_pushnil(L);
+        return 1;
+    }
+    if(angleID < 0 || angleID > 3)
+    {
+        error("AngleID was not between 0 and 3!");
+        lua_pushnil(L);
+        return 1;
+    }
+
+    float al = lua_tonumber(L,-1);
+    lua_pop(L,1);
+    float b = lua_tonumber(L,-1);
+    lua_pop(L,1);
+    float g = lua_tonumber(L,-1);
+    lua_pop(L,1);
+    float r = lua_tonumber(L,-1);
+    lua_pop(L,1);
+
+    float z = lua_tonumber(L,-1);
+    lua_pop(L,1);
+    float y = lua_tonumber(L,-1);
+    lua_pop(L,1);
+    float x = lua_tonumber(L,-1);
+    lua_pop(L,1);
+
+    brick *tmp = new brick;
+    tmp->isSpecial = true;
+    tmp->typeID = typeID;
+
+    tmp->posX = x;
+    tmp->uPosY = y;
+    tmp->posZ = z;
+
+    tmp->width = common_lua->brickTypes->brickTypes[tmp->typeID]->width;
+    tmp->height = common_lua->brickTypes->brickTypes[tmp->typeID]->height;
+    tmp->length = common_lua->brickTypes->brickTypes[tmp->typeID]->length;
+
+    tmp->yHalfPosition = tmp->height % 2;
+    if(angleID % 2 == 0)
+    {
+        tmp->xHalfPosition = tmp->width % 2;
+        tmp->zHalfPosition = tmp->length % 2;
+    }
+    else
+    {
+        tmp->zHalfPosition = tmp->width % 2;
+        tmp->xHalfPosition = tmp->length % 2;
+    }
+
+    tmp->r = r;
+    tmp->g = g;
+    tmp->b = b;
+    tmp->a = al;
+
+    tmp->angleID = angleID;
+    tmp->material = material;
+
+    common_lua->addBrick(tmp,false,true,true);
+
+    //Register an instance of brick
+    lua_newtable(L);
+    lua_getglobal(L,"brickMETATABLE");
+    lua_setmetatable(L,-2);
+    lua_pushinteger(L,tmp->serverID);
+    lua_setfield(L,-2,"id");
+    lua_pushlightuserdata(L,tmp);
+    lua_setfield(L,-2,"pointer");
+    lua_pushstring(L,"brick");
+    lua_setfield(L,-2,"type");
+
+    return 1;
+}
+
+static int getSpecialType(lua_State *L)
+{
+    scope("getSpecialType");
+    int args = lua_gettop(L);
+    if(args != 1)
+    {
+        error("This function requires one argument!");
+        lua_pushinteger(L,0);
+        return 1;
+    }
+    const char *str = lua_tostring(L,-1);
+    lua_pop(L,1);
+    if(!str)
+    {
+        error("Error getting string argument!");
+        lua_pushinteger(L,0);
+        return 1;
+    }
+    std::string dbStr = lowercase(str);
+
+    for(int a = 0; a<common_lua->brickTypes->brickTypes.size(); a++)
+    {
+        if(lowercase(common_lua->brickTypes->brickTypes[a]->uiname) == dbStr)
+        {
+            lua_pushinteger(L,a);
+            return 1;
+        }
+        std::string checkedDB = lowercase(getFileFromPath(common_lua->brickTypes->brickTypes[a]->fileName));
+        if(checkedDB.length() > 4)
+        {
+            if(checkedDB.substr(checkedDB.length()-4,4) == ".blb")
+                checkedDB = checkedDB.substr(0,checkedDB.length()-4);
+            else if(checkedDB.substr(checkedDB.length()-3,3) == "blb")
+                checkedDB = checkedDB.substr(0,checkedDB.length()-3);
+        }
+
+        if(checkedDB == dbStr)
+        {
+            lua_pushinteger(L,a);
+            return 1;
+        }
+    }
+
+    lua_pushinteger(L,0);
+    return 1;
+}
+
+static int setPrint(lua_State *L)
+{
+    scope("setPrint");
+
+    int args = lua_gettop(L);
+    if(args != 2)
+    {
+        error("This function requires two arguments!");
+        return 0;
+    }
+
+    const char *str = lua_tostring(L,-1);
+    lua_pop(L,1);
+    if(!str)
+    {
+        error("Error getting string argument!");
+        return 0;
+    }
+
+    lua_getfield(L, -1, "pointer");
+    brick *passedBrick = (brick*)lua_touserdata(L,-1);
+    lua_pop(L,2);
+
+    if(!passedBrick)
+    {
+        error("Invalid brick pointer!");
+        return 0;
+    }
+
+    std::string rightCase = "";
+    int foundPrint = -1;
+    for(int a = 0; a<common_lua->brickTypes->printNames.size(); a++)
+    {
+        if(lowercase(common_lua->brickTypes->printNames[a]) == lowercase(str))
+        {
+            rightCase = common_lua->brickTypes->printNames[a];
+            foundPrint = a;
+            break;
+        }
+    }
+
+    if(foundPrint == -1)
+    {
+        error("Could not find print");
+        return 0;
+    }
+
+    passedBrick->printID = foundPrint;
+    passedBrick->printName = rightCase;
+    passedBrick->printMask = 0b100;
+
+    packet update;
+    passedBrick->createUpdatePacket(&update);
+    common_lua->theServer->send(&update,true);
+}
+
+static int getOwnerID(lua_State *L)
+{
+    scope("getOwnerID");
+
+    int args = lua_gettop(L);
+    if(args != 1)
+    {
+        error("Wrong amount of arguments!");
+        lua_pushnumber(L,0);
+        return 1;
+    }
+
+    lua_getfield(L, -1, "pointer");
+    brick *passedBrick = (brick*)lua_touserdata(L,-1);
+    lua_pop(L,2);
+
+    if(!passedBrick)
+    {
+        error("Invalid brick!");
+        lua_pushnumber(L,0);
+        return 1;
+    }
+
+    lua_pushnumber(L,passedBrick->builtBy);
+    return 1;
+}
+
 void registerBrickFunctions(lua_State *L)
 {
     //Register metatable for dynamic
     luaL_Reg dynamicRegs[] = {
         {"__tostring",LUAbrickToString},
         {"getName",getBrickName},
+        {"setName",setBrickName},
         {"getPosition",getBrickPosition},
         {"getColor",getBrickColor},
         {"getDimensions",getBrickDimensions},
@@ -530,6 +916,8 @@ void registerBrickFunctions(lua_State *L)
         {"setColor",setBrickColor},
         {"setPosition",setBrickPosition},
         {"setAngleID",setBrickAngleID},
+        //{"setPrint",setPrint},
+        {"getOwnerID",getOwnerID},
         {NULL,NULL}};
     luaL_newmetatable(L,"brickMETATABLE");
     luaL_setfuncs(L,dynamicRegs,0);
@@ -543,7 +931,24 @@ void registerBrickFunctions(lua_State *L)
     lua_register(L,"getNumNamedBricks",getNumNamedBricks);
     lua_register(L,"getNamedBrickIdx",getNamedBrickIdx);
     lua_register(L,"getBrickAt",getBrickAt);
+    lua_register(L,"addBasicBrick",addBasicBrickLua);
+    lua_register(L,"addSpecialBrick",addSpecialBrickLua);
+    lua_register(L,"getSpecialType",getSpecialType);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

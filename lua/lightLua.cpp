@@ -166,6 +166,86 @@ static int setSpotlightDirection(lua_State *L)
     return 0;
 }
 
+static int setBlinkSpeed(lua_State *L)
+{
+    scope("setBlinkSpeed");
+
+    float b = lua_tonumber(L,-1);
+    lua_pop(L,1);
+    float g = lua_tonumber(L,-1);
+    lua_pop(L,1);
+    float r = lua_tonumber(L,-1);
+    lua_pop(L,1);
+
+    light *l = popLight(L);
+
+    if(!l)
+    {
+        error("Bad light provided!");
+        return 0;
+    }
+
+    l->blinkVel.setX(r);
+    l->blinkVel.setY(g);
+    l->blinkVel.setZ(b);
+
+    for(int a = 0; a<common_lua->users.size(); a++)
+        l->sendToClient(common_lua->users[a]->netRef);
+
+    return 0;
+}
+
+static int setLightColor(lua_State *L)
+{
+    scope("setLightColor");
+
+    float b = lua_tonumber(L,-1);
+    lua_pop(L,1);
+    float g = lua_tonumber(L,-1);
+    lua_pop(L,1);
+    float r = lua_tonumber(L,-1);
+    lua_pop(L,1);
+
+    light *l = popLight(L);
+
+    if(!l)
+    {
+        error("Bad light provided!");
+        return 0;
+    }
+
+    l->color.setX(r);
+    l->color.setY(g);
+    l->color.setZ(b);
+
+    for(int a = 0; a<common_lua->users.size(); a++)
+        l->sendToClient(common_lua->users[a]->netRef);
+
+    return 0;
+}
+
+static int setYawVel(lua_State *L)
+{
+    scope("setYawVel");
+
+    float yawVel = lua_tonumber(L,-1);
+    lua_pop(L,1);
+    light *l = popLight(L);
+
+    if(!l)
+    {
+        error("Bad light provided!");
+        return 0;
+    }
+
+    l->yawVel = yawVel;
+
+    for(int a = 0; a<common_lua->users.size(); a++)
+        l->sendToClient(common_lua->users[a]->netRef);
+
+    return 0;
+}
+
 void registerLightFunctions(lua_State *L)
 {
     //Register metatable for dynamic
@@ -174,6 +254,9 @@ void registerLightFunctions(lua_State *L)
         {"remove",luaLightRemove},
         {"setPhi",setPhi},
         {"setSpotlightDirection",setSpotlightDirection},
+        {"setBlinkSpeed",setBlinkSpeed},
+        {"setYawVel",setYawVel},
+        {"setColor",setLightColor},
         {NULL,NULL}};
     luaL_newmetatable(L,"lightMETATABLE");
     luaL_setfuncs(L,dynamicRegs,0);

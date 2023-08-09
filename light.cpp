@@ -49,6 +49,11 @@ void light::sendToClient(serverClientHandle *client)
     data.writeFloat(color.y());
     data.writeFloat(color.z());
 
+    data.writeFloat(blinkVel.x());
+    data.writeFloat(blinkVel.y());
+    data.writeFloat(blinkVel.z());
+    data.writeFloat(yawVel);
+
     data.writeBit(isSpotlight);
     if(isSpotlight)
     {
