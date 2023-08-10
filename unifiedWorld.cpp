@@ -1498,33 +1498,6 @@ bool unifiedWorld::addBrick(brick *theBrick,bool stopOverlaps,bool colliding,boo
             }
         }
 
-        /*if(stopOverlaps)
-        {
-            for(int x = 0; x<theBrick->width; x++)
-            {
-                for(int z = 0; z<theBrick->length; z++)
-                {
-                    for(int y = 0; y<theBrick->height; y++)
-                    {
-                        if(theBrick->angleID % 2 == 0)
-                        {
-                            if(tree->at(fx+x,fy+y,fz+z))
-                            {
-                                return false;
-                            }
-                        }
-                        else
-                        {
-                            if(tree->at(fx+z,fy+y,fz+x))
-                            {
-                                return false;
-                            }
-                        }
-                    }
-                }
-            }
-        }*/
-
         double insertMin[3];
         double insertMax[3];
 
@@ -1551,28 +1524,7 @@ bool unifiedWorld::addBrick(brick *theBrick,bool stopOverlaps,bool colliding,boo
 
         overlapTree->Insert(insertMin,insertMax,theBrick);
 
-        /*for(int x = 0; x<theBrick->width; x++)
-        {
-            for(int z = 0; z<theBrick->length; z++)
-            {
-                if(theBrick->angleID % 2 == 0)
-                {
-                    for(int y = 0; y<theBrick->height; y++)
-                        tree->set(fx+x,fy+y,fz+z,theBrick);
-                }
-                else
-                {
-                    for(int y = 0; y<theBrick->height; y++)
-                        tree->set(fx+z,fy+y,fz+x,theBrick);
-                }
-            }
-        }*/
     }
-
-    /*if(colliding)
-        brickTypes->addPhysicsToBrick(theBrick,physicsWorld);
-    else
-        theBrick->body = 0;*/
 
     brickTypes->addPhysicsToBrick(theBrick,physicsWorld);
     if(!colliding)
@@ -1668,27 +1620,6 @@ void unifiedWorld::clearBricks(clientData *source)
             insertMax[2] -= 0.01;
 
             overlapTree->Remove(insertMin,insertMax,theBrick);
-
-            /*for(int x = 0; x<theBrick->width; x++)
-            {
-                for(int z = 0; z<theBrick->length; z++)
-                {
-                    if(theBrick->angleID % 2 == 0)
-                    {
-                        for(int y = 0; y<theBrick->height; y++)
-                        {
-                            tree->set(fx+x,fy+y,fz+z,0);
-                        }
-                    }
-                    else
-                    {
-                        for(int y = 0; y<theBrick->height; y++)
-                        {
-                            tree->set(fx+z,fy+y,fz+x,0);
-                        }
-                    }
-                }
-            }*/
         }
 
         theServer->send(&data,true);
@@ -1795,27 +1726,6 @@ void unifiedWorld::removeBrick(brick *theBrick)
     insertMax[2] -= 0.01;
 
     overlapTree->Remove(insertMin,insertMax,theBrick);
-
-    /*for(int x = 0; x<theBrick->width; x++)
-    {
-        for(int z = 0; z<theBrick->length; z++)
-        {
-            if(theBrick->angleID % 2 == 0)
-            {
-                for(int y = 0; y<theBrick->height; y++)
-                {
-                    tree->set(fx+x,fy+y,fz+z,0);
-                }
-            }
-            else
-            {
-                for(int y = 0; y<theBrick->height; y++)
-                {
-                    tree->set(fx+z,fy+y,fz+x,0);
-                }
-            }
-        }
-    }*/
 
     playSound("BrickBreak",theBrick->getX(),theBrick->getY(),theBrick->getZ(),false);
 
@@ -2415,19 +2325,6 @@ void unifiedWorld::loadBlocklandSave(std::string filePath)
     int lines = atoi(line.c_str());
     for(int a = 0; a<lines; a++)
         getline(bls,line);
-
-    /*colorSet.clear();
-    for(int a = 0; a<64; a++)
-    {
-        getline(bls,line);
-        split(line,words);
-        vec4 color;
-        color.r = atof(words[0].c_str());
-        color.g = atof(words[1].c_str());
-        color.b = atof(words[2].c_str());
-        color.a = atof(words[3].c_str());
-        colorSet.push_back(color);
-    }*/
 
     for(int a = 0; a<64; a++)
         getline(bls,line);
