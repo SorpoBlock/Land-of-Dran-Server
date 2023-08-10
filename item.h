@@ -2,7 +2,7 @@
 #define ITEM_H_INCLUDED
 
 #include "code/base/server.h"
-#include "code/player.h"
+#include "code/dynamic.h"
 
 #define bodyUserIndex_item 77
 

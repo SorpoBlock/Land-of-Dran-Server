@@ -10,43 +10,28 @@ static int LUAclientEqual(lua_State *L)
         return 1;
     }
 
-    lua_getfield(L, -1, "id");
-    int id1 = lua_tointeger(L,-1);
-    lua_pop(L,2);
+    clientData *a = popClient(L);
+    clientData *b = popClient(L);
 
-    lua_getfield(L, -1, "id");
-    int id2 = lua_tointeger(L,-1);
-    lua_pop(L,2);
-
-    lua_pushboolean(L,id1 == id2);
+    lua_pushboolean(L,a == b);
     return 1;
 }
 
 static int kick(lua_State *L)
 {
-    lua_getfield(L, -1, "id");
-    int id = lua_tointeger(L,-1);
-    lua_pop(L,2);
-
-    for(unsigned int a = 0; a<common_lua->users.size(); a++)
-    {
-        if(common_lua->users[a]->playerID == id)
-        {
-            common_lua->theServer->kick(common_lua->users[a]->netRef);
-            break;
-        }
-    }
-
+    clientData *toKick = popClient(L);
+    if(toKick)
+        common_lua->theServer->kick(toKick->netRef);
     return 0;
 }
 
 static int LUAclientToString(lua_State *L)
 {
-    lua_getfield(L, -1, "id");
-    int id = lua_tointeger(L,-1);
-    lua_pop(L,2);
+    clientData *arg = popClient(L);
 
-    std::string ret = "(Client " + std::to_string(id) + ")";
+    std::string ret = "(Nil?)";
+    if(arg)
+        ret = "(Client " + std::to_string(arg->playerID) + ")";
 
     lua_pushstring(L,ret.c_str());
     return 1;
@@ -56,34 +41,14 @@ static int getPlayer(lua_State *L)
 {
     scope("getPlayer");
 
-    lua_getfield(L, -1, "id");
-    unsigned int id = lua_tointeger(L,-1);
-    lua_pop(L,2);
+    clientData *client = popClient(L);
+    if(!client)
+        lua_pushnil(L);
+    else if(!client->controlling)
+        lua_pushnil(L);
+    else
+        pushDynamic(L,client->controlling);
 
-    for(unsigned int a = 0; a<common_lua->users.size(); a++)
-    {
-        if(common_lua->users[a]->playerID == id)
-        {
-            if(common_lua->users[a]->controlling)
-            {
-                //Register an instance of dynamic
-                lua_newtable(L);
-                lua_getglobal(L,"dynamic");
-                lua_setmetatable(L,-2);
-                lua_pushinteger(L,common_lua->users[a]->controlling->serverID);
-                lua_setfield(L,-2,"id");
-                return 1;
-            }
-            else
-            {
-                lua_pushnil(L);
-                return 1;
-            }
-        }
-    }
-
-    error("Client did not exist.");
-    lua_pushnil(L);
     return 1;
 }
 
@@ -91,34 +56,13 @@ static int getCameraTarget(lua_State *L)
 {
     scope("getCameraTarget");
 
-    lua_getfield(L, -1, "id");
-    unsigned int id = lua_tointeger(L,-1);
-    lua_pop(L,2);
-
-    for(unsigned int a = 0; a<common_lua->users.size(); a++)
-    {
-        if(common_lua->users[a]->playerID == id)
-        {
-            if(common_lua->users[a]->cameraTarget && common_lua->users[a]->cameraBoundToDynamic)
-            {
-                //Register an instance of dynamic
-                lua_newtable(L);
-                lua_getglobal(L,"dynamic");
-                lua_setmetatable(L,-2);
-                lua_pushinteger(L,common_lua->users[a]->cameraTarget->serverID);
-                lua_setfield(L,-2,"id");
-                return 1;
-            }
-            else
-            {
-                lua_pushnil(L);
-                return 1;
-            }
-        }
-    }
-
-    error("Client did not exist.");
-    lua_pushnil(L);
+    clientData *client = popClient(L);
+    if(!client)
+        lua_pushnil(L);
+    else if(!client->cameraTarget || !client->cameraBoundToDynamic)
+        lua_pushnil(L);
+    else
+        pushDynamic(L,client->cameraTarget);
     return 1;
 }
 
@@ -126,26 +70,18 @@ static int getClientName(lua_State *L)
 {
     scope("getClientName");
 
-    lua_getfield(L, -1, "id");
-    unsigned int id = lua_tointeger(L,-1);
-    lua_pop(L,2);
-
-    for(unsigned int a = 0; a<common_lua->users.size(); a++)
-    {
-        if(common_lua->users[a]->playerID == id)
-        {
-            lua_pushstring(L,common_lua->users[a]->name.c_str());
-            return 1;
-        }
-    }
-
-    error("Client did not exist.");
-    lua_pushnil(L);
+    clientData *client = popClient(L);
+    if(!client)
+        lua_pushnil(L);
+    else
+        lua_pushstring(L,client->name.c_str());
     return 1;
 }
 
 static int setPlayer(lua_State *L)
 {
+    scope("setPlayer");
+
     int args = lua_gettop(L);
     if(args != 2)
     {
@@ -153,60 +89,37 @@ static int setPlayer(lua_State *L)
         return 0;
     }
 
-    scope("setPlayer");
+    dynamic *toSet = popDynamic(L,true);
+    clientData *client = popClient(L);
 
-    int dynamicID = -1;
-    if(lua_istable(L,-1))
+    if(!client)
+        return 0;
+
+    if(client->controlling == toSet)
+        return 0;
+
+    client->setControlling(toSet);
+
+    if(!toSet)
+        return 0;
+
+    for(unsigned int slot = 0; slot<inventorySize; slot++)
     {
-        lua_getfield(L, -1, "id");
-        dynamicID = lua_tointeger(L,-1);
-        lua_pop(L,2);
-    }
-    else
-        lua_pop(L,1);
+        packet data;
+        data.writeUInt(packetType_setInventory,packetTypeBits);
+        data.writeUInt(slot,3);
 
-    lua_getfield(L, -1, "id");
-    unsigned int clientID = lua_tointeger(L,-1);
-    lua_pop(L,2);
-
-    for(unsigned int a = 0; a<common_lua->users.size(); a++)
-    {
-        if(common_lua->users[a]->playerID == clientID)
+        if(toSet->holding[slot])
         {
-            for(unsigned int b = 0; b<common_lua->dynamics.size(); b++)
-            {
-                if(common_lua->dynamics[b]->serverID == dynamicID)
-                {
-                    common_lua->users[a]->setControlling(common_lua->dynamics[b]);
-                    //common_lua->users[a]->controlling = common_lua->dynamics[b];
-
-                    for(unsigned int slot = 0; slot<inventorySize; slot++)
-                    {
-                        packet data;
-                        data.writeUInt(packetType_setInventory,packetTypeBits);
-                        data.writeUInt(slot,3);
-
-                        if(common_lua->users[a]->controlling->holding[slot])
-                        {
-                            data.writeBit(true);
-                            data.writeUInt(common_lua->users[a]->controlling->holding[slot]->heldItemType->itemTypeID,10);
-                        }
-                        else
-                            data.writeBit(false);
-
-                        common_lua->users[a]->netRef->send(&data,true);
-                    }
-                    return 0;
-                }
-            }
-
-            //common_lua->users[a]->controlling = 0;
-            common_lua->users[a]->setControlling(0);
-            return 0;
+            data.writeBit(true);
+            data.writeUInt(toSet->holding[slot]->heldItemType->itemTypeID,10);
         }
+        else
+            data.writeBit(false);
+
+        client->netRef->send(&data,true);
     }
 
-    error("Invalid client");
     return 0;
 }
 
@@ -214,37 +127,26 @@ static int bindCamera(lua_State *L)
 {
     scope("bindCamera");
 
-    lua_getfield(L, -1, "id");
-    int dynamicID = lua_tointeger(L,-1);
-    lua_pop(L,2);
+    dynamic *target = popDynamic(L,true);
+    clientData *client = popClient(L);
 
-    lua_getfield(L, -1, "id");
-    unsigned int clientID = lua_tointeger(L,-1);
-    lua_pop(L,2);
+    if(!client)
+        return 0;
 
-    for(unsigned int a = 0; a<common_lua->users.size(); a++)
+    if(client->cameraTarget == target && client->cameraBoundToDynamic && target)
+        return 0;
+
+    if(!target)
     {
-        if(common_lua->users[a]->playerID == clientID)
-        {
-            for(unsigned int b = 0; b<common_lua->dynamics.size(); b++)
-            {
-                if(common_lua->dynamics[b]->serverID == dynamicID)
-                {
-                    common_lua->users[a]->cameraBoundToDynamic = true;
-                    common_lua->users[a]->cameraTarget = common_lua->dynamics[b];
-                    common_lua->users[a]->needsCameraUpdate = true;
-                    return 0;
-                }
-            }
-
-            common_lua->users[a]->cameraBoundToDynamic = false;
-            common_lua->users[a]->cameraTarget = 0;
-            common_lua->users[a]->needsCameraUpdate = true;
-            return 0;
-        }
+        client->cameraBoundToDynamic = false;
+        client->cameraTarget = 0;
+        client->needsCameraUpdate = true;
+        return 0;
     }
 
-    error("Invalid client");
+    client->cameraBoundToDynamic = true;
+    client->cameraTarget = target;
+    client->needsCameraUpdate = true;
     return 0;
 }
 
@@ -259,25 +161,18 @@ static int setCameraPosition(lua_State *L)
     float x = lua_tonumber(L,-1);
     lua_pop(L,1);
 
-    lua_getfield(L, -1, "id");
-    unsigned int clientID = lua_tointeger(L,-1);
-    lua_pop(L,2);
+    clientData *client = popClient(L);
 
-    for(unsigned int a = 0; a<common_lua->users.size(); a++)
-    {
-        if(common_lua->users[a]->playerID == clientID)
-        {
-            common_lua->users[a]->cameraBoundToDynamic = false;
-            common_lua->users[a]->cameraTarget = 0;
-            common_lua->users[a]->camX = x;
-            common_lua->users[a]->camY = y;
-            common_lua->users[a]->camZ = z;
-            common_lua->users[a]->needsCameraUpdate = true;
-            return 0;
-        }
-    }
+    if(!client)
+        return 0;
 
-    error("Invalid client");
+    client->cameraBoundToDynamic = false;
+    client->cameraTarget = 0;
+    client->camX = x;
+    client->camY = y;
+    client->camZ = z;
+    client->needsCameraUpdate = true;
+
     return 0;
 }
 
@@ -292,25 +187,17 @@ static int setCameraDirection(lua_State *L)
     float x = lua_tonumber(L,-1);
     lua_pop(L,1);
 
-    lua_getfield(L, -1, "id");
-    unsigned int clientID = lua_tointeger(L,-1);
-    lua_pop(L,2);
+    clientData *client = popClient(L);
 
-    for(unsigned int a = 0; a<common_lua->users.size(); a++)
-    {
-        if(common_lua->users[a]->playerID == clientID)
-        {
-            common_lua->users[a]->cameraBoundToDynamic = false;
-            common_lua->users[a]->cameraTarget = 0;
-            common_lua->users[a]->camDirX = x;
-            common_lua->users[a]->camDirY = y;
-            common_lua->users[a]->camDirZ = z;
-            common_lua->users[a]->needsCameraUpdate = true;
-            return 0;
-        }
-    }
+    if(!client)
+        return 0;
 
-    error("Invalid client");
+    client->cameraBoundToDynamic = false;
+    client->cameraTarget = 0;
+    client->camDirX = x;
+    client->camDirY = y;
+    client->camDirZ = z;
+    client->needsCameraUpdate = true;
     return 0;
 }
 
@@ -321,23 +208,16 @@ static int setCameraFreelook(lua_State *L)
     bool toggle = lua_toboolean(L,-1);
     lua_pop(L,1);
 
-    lua_getfield(L, -1, "id");
-    unsigned int clientID = lua_tointeger(L,-1);
-    lua_pop(L,2);
+    clientData *client = popClient(L);
 
-    for(unsigned int a = 0; a<common_lua->users.size(); a++)
-    {
-        if(common_lua->users[a]->playerID == clientID)
-        {
-            common_lua->users[a]->cameraBoundToDynamic = false;
-            common_lua->users[a]->cameraTarget = 0;
-            common_lua->users[a]->cameraFreelookEnabled = toggle;
-            common_lua->users[a]->needsCameraUpdate = true;
-            return 0;
-        }
-    }
+    if(!client)
+        return 0;
 
-    error("Invalid client");
+    client->cameraBoundToDynamic = false;
+    client->cameraTarget = 0;
+    client->cameraFreelookEnabled = toggle;
+    client->needsCameraUpdate = true;
+
     return 0;
 }
 
@@ -348,20 +228,12 @@ static int toggleRotationControl(lua_State *L)
     bool toggle = lua_toboolean(L,-1);
     lua_pop(L,1);
 
-    lua_getfield(L, -1, "id");
-    unsigned int clientID = lua_tointeger(L,-1);
-    lua_pop(L,2);
+    clientData *client = popClient(L);
 
-    for(unsigned int a = 0; a<common_lua->users.size(); a++)
-    {
-        if(common_lua->users[a]->playerID == clientID)
-        {
-            common_lua->users[a]->prohibitTurning = !toggle;
-            return 0;
-        }
-    }
+    if(!client)
+        return 0;
 
-    error("Invalid client.");
+    client->prohibitTurning = !toggle;
     return 0;
 }
 
@@ -384,64 +256,12 @@ static int bottomPrint(lua_State *L)
         return 0;
     }
 
-    lua_getfield(L, -1, "id");
-    unsigned int clientID = lua_tointeger(L,-1);
-    lua_pop(L,2);
+    clientData *client = popClient(L);
 
-    for(unsigned int a = 0; a<common_lua->users.size(); a++)
-    {
-        if(common_lua->users[a]->playerID == clientID)
-        {
-            common_lua->users[a]->bottomPrint(name,ms);
-            return 0;
-        }
-    }
+    if(!client)
+        return 0;
 
-    error("Invalid client.");
-    return 0;
-}
-
-static int driveCar(lua_State *L)
-{
-    scope("driveCar");
-
-    int carID = lua_tointeger(L,-1);
-    lua_pop(L,1);
-
-    lua_getfield(L, -1, "id");
-    unsigned int clientID = lua_tointeger(L,-1);
-    lua_pop(L,2);
-
-    for(unsigned int a = 0; a<common_lua->users.size(); a++)
-    {
-        if(common_lua->users[a]->playerID == clientID)
-        {
-            if(carID == -1)
-            {
-                common_lua->users[a]->driving = 0;
-                common_lua->users[a]->controlling->sittingOn = 0;
-                return 0;
-            }
-
-            for(unsigned int b = 0; b<common_lua->brickCars.size(); b++)
-            {
-                if(common_lua->brickCars[b]->serverID == carID)
-                {
-                    common_lua->users[a]->driving = common_lua->brickCars[b];
-                    if(common_lua->users[a]->controlling)
-                    {
-                        common_lua->users[a]->controlling->sittingOn = common_lua->brickCars[b]->body;
-                    }
-                    return 0;
-                }
-            }
-
-            error("Brick car not found!");
-            return 0;
-        }
-    }
-
-    error("Invalid client.");
+    client->bottomPrint(name,ms);
     return 0;
 }
 
@@ -463,12 +283,7 @@ static int getClientIdx(lua_State *L)
     if(args > 0)
         lua_pop(L,args);
 
-    //Register an instance of client
-    lua_newtable(L);
-    lua_getglobal(L,"clientMETATABLE");
-    lua_setmetatable(L,-2);
-    lua_pushinteger(L,common_lua->users[idx]->playerID);
-    lua_setfield(L,-2,"id");
+    pushClient(L,common_lua->users[idx]);
 
     return 1;
 }
@@ -510,12 +325,7 @@ static int getClientByName(lua_State *L)
 
             if(match)
             {
-                //Register an instance of client
-                lua_newtable(L);
-                lua_getglobal(L,"clientMETATABLE");
-                lua_setmetatable(L,-2);
-                lua_pushinteger(L,common_lua->users[a]->playerID);
-                lua_setfield(L,-2,"id");
+                pushClient(L,common_lua->users[a]);
                 return 1;
             }
         }
@@ -550,26 +360,12 @@ static int LUAspawnPlayer(lua_State *L)
     float x = lua_tonumber(L,-1);
     lua_pop(L,1);
 
-    lua_getfield(L, -1, "id");
-    unsigned int id = lua_tointeger(L,-1);
-    lua_pop(L,2);
+    clientData *client = popClient(L);
 
-    if(id < 0)
-    {
-        error("Invalid client object passed.");
+    if(!client)
         return 0;
-    }
 
-    for(unsigned int a = 0; a<common_lua->users.size(); a++)
-    {
-        if(common_lua->users[a]->playerID == id)
-        {
-            common_lua->spawnPlayer(common_lua->users[a],x,y,z);
-            return 0;
-        }
-    }
-
-    error("Client not found!");
+    common_lua->spawnPlayer(client,x,y,z);
     return 0;
 }
 
@@ -577,21 +373,13 @@ static int LUAclearBricks(lua_State *L)
 {
     scope("LUAclearBricks");
 
-    lua_getfield(L, -1, "id");
-    unsigned int clientID = lua_tointeger(L,-1);
-    lua_pop(L,2);
+    clientData *client = popClient(L);
 
+    if(!client)
+        return 0;
 
-    for(unsigned int a = 0; a<common_lua->users.size(); a++)
-    {
-        if(common_lua->users[a]->playerID == clientID)
-        {
-            common_lua->clearBricks(common_lua->users[a]);
-            return 0;
-        }
-    }
+    common_lua->clearBricks(client);
 
-    error("Invalid client!");
     return 0;
 }
 
@@ -599,36 +387,19 @@ static int getNumClientVehicles(lua_State *L)
 {
     scope("getNumClientVehicles");
 
-    lua_getfield(L, -1, "id");
-    int id = lua_tointeger(L,-1);
-    lua_pop(L,2);
+    clientData *client = popClient(L);
 
-    if(id < 0)
+    if(!client)
     {
-        error("ID passed was under 0");
-        lua_pushnumber(L,0);
+        lua_pushnil(L);
         return 1;
-    }
-
-    int accountID = -1;
-    for(int a = 0; a<common_lua->users.size(); a++)
-    {
-        if(common_lua->users[a]->playerID == id)
-        {
-            accountID = common_lua->users[a]->accountID;
-            break;
-        }
     }
 
     int num = 0;
 
     for(unsigned int a = 0; a<common_lua->brickCars.size(); a++)
-    {
-        if(common_lua->brickCars[a]->ownerID == accountID)
-        {
+        if(common_lua->brickCars[a]->ownerID == client->accountID)
             num++;
-        }
-    }
 
     lua_pushnumber(L,num);
     return 1;
@@ -638,28 +409,15 @@ static int getNumClientBricks(lua_State *L)
 {
     scope("getNumClientBricks");
 
-    lua_getfield(L, -1, "id");
-    int id = lua_tointeger(L,-1);
-    lua_pop(L,2);
+    clientData *client = popClient(L);
 
-    if(id < 0)
+    if(!client)
     {
-        error("ID passed was under 0");
-        lua_pushnumber(L,0);
+        lua_pushnil(L);
         return 1;
     }
 
-    for(unsigned int a = 0; a<common_lua->users.size(); a++)
-    {
-        if(common_lua->users[a]->playerID == id)
-        {
-            lua_pushnumber(L,common_lua->users[a]->ownedBricks.size());
-            return 1;
-        }
-    }
-
-    error("Could not find client ID " + std::to_string(id));
-    lua_pushnumber(L,0);
+    lua_pushnumber(L,client->ownedBricks.size());
     return 1;
 }
 
@@ -667,28 +425,15 @@ static int hasEvalAccess(lua_State *L)
 {
     scope("hasEvalAccess");
 
-    lua_getfield(L, -1, "id");
-    int id = lua_tointeger(L,-1);
-    lua_pop(L,2);
+    clientData *client = popClient(L);
 
-    if(id < 0)
+    if(!client)
     {
-        error("ID passed was under 0");
         lua_pushboolean(L,false);
         return 1;
     }
 
-    for(unsigned int a = 0; a<common_lua->users.size(); a++)
-    {
-        if(common_lua->users[a]->playerID == id)
-        {
-            lua_pushboolean(L,common_lua->users[a]->hasLuaAccess);
-            return 1;
-        }
-    }
-
-    error("Could not find client ID " + std::to_string(id));
-    lua_pushboolean(L,false);
+    lua_pushboolean(L,client->hasLuaAccess);
     return 1;
 }
 
@@ -696,28 +441,15 @@ static int isGuest(lua_State *L)
 {
     scope("isGuest");
 
-    lua_getfield(L, -1, "id");
-    int id = lua_tointeger(L,-1);
-    lua_pop(L,2);
+    clientData *client = popClient(L);
 
-    if(id < 0)
+    if(!client)
     {
-        error("ID passed was under 0");
         lua_pushboolean(L,true);
         return 1;
     }
 
-    for(unsigned int a = 0; a<common_lua->users.size(); a++)
-    {
-        if(common_lua->users[a]->playerID == id)
-        {
-            lua_pushboolean(L,common_lua->users[a]->logInState != 2);
-            return 1;
-        }
-    }
-
-    error("Could not find client ID " + std::to_string(id));
-    lua_pushboolean(L,true);
+    lua_pushboolean(L,client->logInState != 2);
     return 1;
 }
 
@@ -725,31 +457,18 @@ static int getID(lua_State *L)
 {
     scope("getID");
 
-    lua_getfield(L, -1, "id");
-    int id = lua_tointeger(L,-1);
-    lua_pop(L,2);
+    clientData *client = popClient(L);
 
-    if(id < 0)
+    if(!client)
     {
-        error("ID passed was under 0");
-        lua_pushnumber(L,0);
+        lua_pushnumber(L,-1);
         return 1;
     }
 
-    for(unsigned int a = 0; a<common_lua->users.size(); a++)
-    {
-        if(common_lua->users[a]->playerID == id)
-        {
-            if(common_lua->users[a]->logInState != 2)
-                lua_pushnumber(L,0);
-            else
-                lua_pushnumber(L,common_lua->users[a]->accountID);
-            return 1;
-        }
-    }
-
-    error("Could not find client ID " + std::to_string(id));
-    lua_pushnumber(L,0);
+    if(client->logInState != 2)
+        lua_pushnumber(L,0);
+    else
+        lua_pushnumber(L,client->accountID);
     return 1;
 }
 
@@ -760,50 +479,29 @@ static int getClientBrickIdx(lua_State *L)
     int idx = lua_tointeger(L,-1);
     lua_pop(L,1);
 
-    lua_getfield(L, -1, "id");
-    int id = lua_tointeger(L,-1);
-    lua_pop(L,2);
+    clientData *client = popClient(L);
 
-    if(id < 0)
+    if(!client)
     {
-        error("ID passed was under 0");
+        lua_pushnil(L);
+        return 1;
+    }
+
+    if(idx >= client->ownedBricks.size())
+    {
+        error("Brick IDX out of range for client.");
         lua_pushnil(L);
         return 1;
     }
 
     if(idx < 0)
     {
-        error("Idx passed was under 0");
+        error("Brick IDX must be positive integer!");
         lua_pushnil(L);
         return 1;
     }
 
-    for(unsigned int a = 0; a<common_lua->users.size(); a++)
-    {
-        if(common_lua->users[a]->playerID == id)
-        {
-            if(idx >= common_lua->users[a]->ownedBricks.size())
-            {
-                error("Brick IDX out of range for client.");
-                lua_pushnil(L);
-                return 1;
-            }
-
-            lua_newtable(L);
-            lua_getglobal(L,"brickMETATABLE");
-            lua_setmetatable(L,-2);
-            lua_pushinteger(L,common_lua->users[a]->ownedBricks[idx]->serverID);
-            lua_setfield(L,-2,"id");
-            lua_pushlightuserdata(L,common_lua->users[a]->ownedBricks[idx]);
-            lua_setfield(L,-2,"pointer");
-            lua_pushstring(L,"brick");
-            lua_setfield(L,-2,"type");
-            return 1;
-        }
-    }
-
-    error("Could not find client ID " + std::to_string(id));
-    lua_pushnil(L);
+    pushBrick(L,client->ownedBricks[idx]);
     return 1;
 }
 
@@ -841,20 +539,12 @@ static int sendMessage(lua_State *L)
     }
     std::string message = msg;
 
-    lua_getfield(L, -1, "id");
-    int id = lua_tointeger(L,-1);
-    lua_pop(L,2);
+    clientData *client = popClient(L);
 
-    for(unsigned int a = 0; a<common_lua->users.size(); a++)
-    {
-        if(common_lua->users[a]->playerID == id)
-        {
-            common_lua->users[a]->message(message,category);
-            return 0;
-        }
-    }
+    if(!client)
+        return 0;
 
-    error("Could not find client ID " + std::to_string(id));
+    client->message(message,category);
     return 0;
 }
 
@@ -865,24 +555,16 @@ static int setJetsEnabled(lua_State *L)
     bool toggle = lua_toboolean(L,-1);
     lua_pop(L,1);
 
-    lua_getfield(L, -1, "id");
-    unsigned int clientID = lua_tointeger(L,-1);
-    lua_pop(L,2);
+    clientData *client = popClient(L);
 
-    for(unsigned int a = 0; a<common_lua->users.size(); a++)
-    {
-        if(common_lua->users[a]->playerID == clientID)
-        {
-            common_lua->users[a]->canJet = toggle;
+    if(!client)
+        return 0;
 
-            if(common_lua->users[a]->controlling)
-                common_lua->users[a]->forceTransformUpdate();
+    client->canJet = toggle;
 
-            return 0;
-        }
-    }
+    if(client->controlling)
+        client->forceTransformUpdate();
 
-    error("Invalid client.");
     return 0;
 }
 
@@ -890,27 +572,19 @@ static int endAdminOrb(lua_State *L)
 {
     scope("endAdminOrb");
 
-    lua_getfield(L, -1, "id");
-    unsigned int clientID = lua_tointeger(L,-1);
-    lua_pop(L,2);
+    clientData *client = popClient(L);
 
-    for(unsigned int a = 0; a<common_lua->users.size(); a++)
+    if(!client)
+        return 0;
+
+    client->cameraAdminOrb = false;
+    client->sendCameraDetails();
+
+    if(client->adminOrb)
     {
-        if(common_lua->users[a]->playerID == clientID)
-        {
-            common_lua->users[a]->cameraAdminOrb = false;
-            common_lua->users[a]->sendCameraDetails();
-
-            if(common_lua->users[a]->adminOrb)
-            {
-                common_lua->removeEmitter(common_lua->users[a]->adminOrb);
-                common_lua->users[a]->adminOrb = 0;
-            }
-            return 0;
-        }
+        common_lua->removeEmitter(client->adminOrb);
+        client->adminOrb = 0;
     }
-
-    error("Invalid client.");
     return 0;
 }
 
@@ -918,21 +592,15 @@ static int getIP(lua_State *L)
 {
     scope("getIP");
 
-    lua_getfield(L, -1, "id");
-    unsigned int clientID = lua_tointeger(L,-1);
-    lua_pop(L,2);
+    clientData *client = popClient(L);
 
-    for(unsigned int a = 0; a<common_lua->users.size(); a++)
+    if(!client)
     {
-        if(common_lua->users[a]->playerID == clientID)
-        {
-            lua_pushstring(L,common_lua->users[a]->netRef->getIP().c_str());
-            return 1;
-        }
+        lua_pushnil(L);
+        return 1;
     }
 
-    error("Invalid client.");
-    lua_pushnil(L);
+    lua_pushstring(L,client->netRef->getIP().c_str());
     return 1;
 }
 
@@ -940,21 +608,15 @@ static int getPing(lua_State *L)
 {
     scope("getPing");
 
-    lua_getfield(L, -1, "id");
-    unsigned int clientID = lua_tointeger(L,-1);
-    lua_pop(L,2);
+    clientData *client = popClient(L);
 
-    for(unsigned int a = 0; a<common_lua->users.size(); a++)
+    if(!client)
     {
-        if(common_lua->users[a]->playerID == clientID)
-        {
-            lua_pushnumber(L,common_lua->users[a]->lastPingRecvAtMS - common_lua->users[a]->lastPingSentAtMS);
-            return 1;
-        }
+        lua_pushnil(L);
+        return 1;
     }
 
-    error("Invalid client.");
-    lua_pushnil(L);
+    lua_pushnumber(L,client->lastPingRecvAtMS - client->lastPingSentAtMS);
     return 1;
 }
 

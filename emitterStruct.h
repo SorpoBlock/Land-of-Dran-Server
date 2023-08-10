@@ -8,7 +8,7 @@
 #include <BulletCollision/CollisionShapes/btTriangleMesh.h>
 #include <BulletCollision/CollisionDispatch/btCollisionWorld.h>
 #include "code/brick.h"
-#include "code/player.h"
+#include "code/dynamic.h"
 
 using namespace syj;
 

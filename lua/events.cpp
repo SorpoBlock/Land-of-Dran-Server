@@ -158,11 +158,7 @@ void clientJoin(clientData *source)
         }
         else
         {
-            lua_newtable(common_lua->luaState);
-            lua_getglobal(common_lua->luaState,"clientMETATABLE");
-            lua_setmetatable(common_lua->luaState,-2);
-            lua_pushinteger(common_lua->luaState,source->playerID);
-            lua_setfield(common_lua->luaState,-2,"id");
+            pushClient(common_lua->luaState,source);
 
             if(lua_pcall(common_lua->luaState,1,0,0))
             {
@@ -195,7 +191,6 @@ void clientJoin(clientData *source)
 
 bool clientAdminOrb(clientData* source,bool startOrStop,float &x,float &y,float &z)
 {
-
     bool cancelled = false;
 
     //Maybe I should just have the event as a global variable...
@@ -230,11 +225,7 @@ bool clientAdminOrb(clientData* source,bool startOrStop,float &x,float &y,float 
         }
         else
         {
-            lua_newtable(common_lua->luaState);
-            lua_getglobal(common_lua->luaState,"clientMETATABLE");
-            lua_setmetatable(common_lua->luaState,-2);
-            lua_pushinteger(common_lua->luaState,source->playerID);
-            lua_setfield(common_lua->luaState,-2,"id");
+            pushClient(common_lua->luaState,source);
 
             lua_pushboolean(common_lua->luaState,startOrStop);
 
@@ -323,11 +314,7 @@ bool clientChat(clientData *source,std::string &message)
         }
         else
         {
-            lua_newtable(common_lua->luaState);
-            lua_getglobal(common_lua->luaState,"clientMETATABLE");
-            lua_setmetatable(common_lua->luaState,-2);
-            lua_pushinteger(common_lua->luaState,source->playerID);
-            lua_setfield(common_lua->luaState,-2,"id");
+            pushClient(common_lua->luaState,source);
 
             lua_pushstring(common_lua->luaState,message.c_str());
 
@@ -412,11 +399,7 @@ bool clientTryLoadCarEvent(clientData *source,brickCar *theCar,bool loadCarAsCar
         }
         else
         {
-            lua_newtable(common_lua->luaState);
-            lua_getglobal(common_lua->luaState,"clientMETATABLE");
-            lua_setmetatable(common_lua->luaState,-2);
-            lua_pushinteger(common_lua->luaState,source->playerID);
-            lua_setfield(common_lua->luaState,-2,"id");
+            pushClient(common_lua->luaState,source);
 
             luaPushBrickCar(common_lua->luaState,theCar);
 
@@ -494,11 +477,7 @@ void clientLeaveEvent(clientData *source)
         }
         else
         {
-            lua_newtable(common_lua->luaState);
-            lua_getglobal(common_lua->luaState,"clientMETATABLE");
-            lua_setmetatable(common_lua->luaState,-2);
-            lua_pushinteger(common_lua->luaState,source->playerID);
-            lua_setfield(common_lua->luaState,-2,"id");
+            pushClient(common_lua->luaState,source);
 
             if(lua_pcall(common_lua->luaState,1,0,0))
             {
@@ -565,21 +544,9 @@ void clientPlantBrickEvent(clientData *source,brick *theBrick)
         }
         else
         {
-            lua_newtable(common_lua->luaState);
-            lua_getglobal(common_lua->luaState,"clientMETATABLE");
-            lua_setmetatable(common_lua->luaState,-2);
-            lua_pushinteger(common_lua->luaState,source->playerID);
-            lua_setfield(common_lua->luaState,-2,"id");
+            pushClient(common_lua->luaState,source);
 
-            lua_newtable(common_lua->luaState);
-            lua_getglobal(common_lua->luaState,"brickMETATABLE");
-            lua_setmetatable(common_lua->luaState,-2);
-            lua_pushinteger(common_lua->luaState,theBrick->serverID);
-            lua_setfield(common_lua->luaState,-2,"id");
-            lua_pushlightuserdata(common_lua->luaState,theBrick);
-            lua_setfield(common_lua->luaState,-2,"pointer");
-            lua_pushstring(common_lua->luaState,"brick");
-            lua_setfield(common_lua->luaState,-2,"type");
+            pushBrick(common_lua->luaState,theBrick);
 
             if(lua_pcall(common_lua->luaState,2,0,0))
             {
@@ -645,21 +612,9 @@ void clientClickBrickEvent(clientData *source,brick *theBrick,float x,float y,fl
         }
         else
         {
-            lua_newtable(common_lua->luaState);
-            lua_getglobal(common_lua->luaState,"clientMETATABLE");
-            lua_setmetatable(common_lua->luaState,-2);
-            lua_pushinteger(common_lua->luaState,source->playerID);
-            lua_setfield(common_lua->luaState,-2,"id");
+            pushClient(common_lua->luaState,source);
 
-            lua_newtable(common_lua->luaState);
-            lua_getglobal(common_lua->luaState,"brickMETATABLE");
-            lua_setmetatable(common_lua->luaState,-2);
-            lua_pushinteger(common_lua->luaState,theBrick->serverID);
-            lua_setfield(common_lua->luaState,-2,"id");
-            lua_pushlightuserdata(common_lua->luaState,theBrick);
-            lua_setfield(common_lua->luaState,-2,"pointer");
-            lua_pushstring(common_lua->luaState,"brick");
-            lua_setfield(common_lua->luaState,-2,"type");
+            pushBrick(common_lua->luaState,theBrick);
 
             lua_pushnumber(common_lua->luaState,x);
             lua_pushnumber(common_lua->luaState,y);
@@ -730,11 +685,7 @@ bool spawnPlayerEvent(clientData *client,float &x,float &y,float &z,bool cancell
         }
         else
         {
-            lua_newtable(common_lua->luaState);
-            lua_getglobal(common_lua->luaState,"clientMETATABLE");
-            lua_setmetatable(common_lua->luaState,-2);
-            lua_pushinteger(common_lua->luaState,client->playerID);
-            lua_setfield(common_lua->luaState,-2,"id");
+            pushClient(common_lua->luaState,client);
 
             lua_pushnumber(common_lua->luaState,x);
             lua_pushnumber(common_lua->luaState,y);

@@ -1,4 +1,4 @@
-#include "player.h"
+#include "dynamic.h"
 
 void dynamic::setNodeColor(std::string nodeName,btVector3 nodeColor,server *broadcast)
 {

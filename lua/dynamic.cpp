@@ -10,15 +10,10 @@ static int LUAdynamicEqual(lua_State *L)
         return 1;
     }
 
-    lua_getfield(L, -1, "id");
-    int id1 = lua_tointeger(L,-1);
-    lua_pop(L,2);
+    dynamic *a = popDynamic(L);
+    dynamic *b = popDynamic(L);
 
-    lua_getfield(L, -1, "id");
-    int id2 = lua_tointeger(L,-1);
-    lua_pop(L,2);
-
-    lua_pushboolean(L,id1 == id2);
+    lua_pushboolean(L,a == b);
     return 1;
 }
 
@@ -47,12 +42,7 @@ static int getDynamicIdx(lua_State *L)
         return 1;
     }
 
-    //Register an instance of dynamic
-    lua_newtable(L);
-    lua_getglobal(L,"dynamic");
-    lua_setmetatable(L,-2);
-    lua_pushinteger(L,common_lua->dynamics[idx]->serverID);
-    lua_setfield(L,-2,"id");
+    pushDynamic(L,common_lua->dynamics[idx]);
 
     return 1;
 }
@@ -94,12 +84,7 @@ static int getDynamicOfClient(lua_State *L)
             {
                 if(common_lua->users[a]->controlling)
                 {
-                    //Register an instance of dynamic
-                    lua_newtable(L);
-                    lua_getglobal(L,"dynamic");
-                    lua_setmetatable(L,-2);
-                    lua_pushinteger(L,common_lua->users[a]->controlling->serverID);
-                    lua_setfield(L,-2,"id");
+                    pushDynamic(L,common_lua->users[a]->controlling);
                     return 1;
                 }
                 else
@@ -118,14 +103,12 @@ static int getDynamicOfClient(lua_State *L)
 
 static int dynamicSetGravity(lua_State *L)
 {
-    std::cout<<"Stack pointer: "<<lua_gettop(L)<<"\n";
     float z = lua_tonumber(L,-1);
     lua_pop(L,1);
     float y = lua_tonumber(L,-1);
     lua_pop(L,1);
     float x = lua_tonumber(L,-1);
     lua_pop(L,1);
-    std::cout<<"Stack pointer: "<<lua_gettop(L)<<"\n";
 
     if(x > 100 || y > 100 || z > 100 || x < -100 || y < -100 || z < -100)
     {
@@ -133,33 +116,12 @@ static int dynamicSetGravity(lua_State *L)
         return 0;
     }
 
-    lua_getfield(L, -1, "id");
-    int id = lua_tointeger(L,-1);
-    lua_pop(L,2);
-    std::cout<<"Stack pointer: "<<lua_gettop(L)<<"\n";
+    dynamic *object = popDynamic(L);
 
-    std::cout<<"args: "<<id<<","<<x<<","<<y<<","<<z<<"\n";
-
-    if(id < 0)
-    {
-        error("dynamicSetGravity bad id " + std::to_string(id));
+    if(!object)
         return 0;
-    }
 
-    for(unsigned int a = 0; a<common_lua->dynamics.size(); a++)
-    {
-        dynamic *d = common_lua->dynamics[a];
-        if(d)
-        {
-            if(d->serverID == id)
-            {
-                d->setGravity(btVector3(x,y,z));
-                return 0;
-            }
-        }
-    }
-
-    error("dynamicSetGravity bad id " + std::to_string(id));
+    object->setGravity(btVector3(x,y,z));
     return 0;
 }
 
@@ -179,30 +141,12 @@ static int setAngularFactor(lua_State *L)
         return 0;
     }
 
-    lua_getfield(L, -1, "id");
-    int id = lua_tointeger(L,-1);
-    lua_pop(L,2);
+    dynamic *object = popDynamic(L);
 
-    if(id < 0)
-    {
-        error("bad id " + std::to_string(id));
+    if(!object)
         return 0;
-    }
 
-    for(unsigned int a = 0; a<common_lua->dynamics.size(); a++)
-    {
-        dynamic *d = common_lua->dynamics[a];
-        if(d)
-        {
-            if(d->serverID == id)
-            {
-                d->setAngularFactor(btVector3(x,y,z));
-                return 0;
-            }
-        }
-    }
-
-    error("bad id " + std::to_string(id));
+    object->setAngularFactor(btVector3(x,y,z));
     return 0;
 }
 
@@ -215,43 +159,21 @@ static int dynamicSetVelocity(lua_State *L)
     float x = lua_tonumber(L,-1);
     lua_pop(L,1);
 
-    lua_getfield(L, -1, "id");
-    int id = lua_tointeger(L,-1);
-    lua_pop(L,2);
+    dynamic *object = popDynamic(L);
 
-    if(id < 0)
-    {
-        error("dynamicSetVelocity bad id " + std::to_string(id));
+    if(!object)
         return 0;
-    }
 
-    for(unsigned int a = 0; a<common_lua->dynamics.size(); a++)
+    object->activate();
+    object->setLinearVelocity(btVector3(x,y,z));
+
+    if(object->isPlayer)
     {
-        dynamic *d = common_lua->dynamics[a];
-        if(d)
-        {
-            if(d->serverID == id)
-            {
-                d->activate();
-                d->setLinearVelocity(btVector3(x,y,z));
-
-                if(d->isPlayer)
-                {
-                    for(int b = 0; b<common_lua->users.size(); b++)
-                    {
-                        if(common_lua->users[b]->controlling == d)
-                        {
-                            common_lua->users[b]->forceTransformUpdate();
-                        }
-                    }
-                }
-
-                return 0;
-            }
-        }
+        for(int b = 0; b<common_lua->users.size(); b++)
+            if(common_lua->users[b]->controlling == object)
+                common_lua->users[b]->forceTransformUpdate();
     }
 
-    error("dynamicSetVelocity bad id " + std::to_string(id));
     return 0;
 }
 
@@ -265,44 +187,22 @@ static int setPosition(lua_State *L)
     float x = lua_tonumber(L,-1);
     lua_pop(L,1);
 
-    lua_getfield(L, -1, "id");
-    int id = lua_tointeger(L,-1);
-    lua_pop(L,2);
+    dynamic *object = popDynamic(L);
 
-    if(id < 0)
-    {
-        error("bad id " + std::to_string(id));
+    if(!object)
         return 0;
-    }
 
-    for(unsigned int a = 0; a<common_lua->dynamics.size(); a++)
+    btTransform t = object->getWorldTransform();
+    t.setOrigin(btVector3(x,y,z));
+    object->setWorldTransform(t);
+
+    if(object->isPlayer)
     {
-        dynamic *d = common_lua->dynamics[a];
-        if(d)
-        {
-            if(d->serverID == id)
-            {
-                btTransform t = d->getWorldTransform();
-                t.setOrigin(btVector3(x,y,z));
-                d->setWorldTransform(t);
-
-                if(d->isPlayer)
-                {
-                    for(int b = 0; b<common_lua->users.size(); b++)
-                    {
-                        if(common_lua->users[b]->controlling == d)
-                        {
-                            common_lua->users[b]->forceTransformUpdate();
-                        }
-                    }
-                }
-
-                return 0;
-            }
-        }
+        for(int b = 0; b<common_lua->users.size(); b++)
+            if(common_lua->users[b]->controlling == object)
+                common_lua->users[b]->forceTransformUpdate();
     }
 
-    error("bad id " + std::to_string(id));
     return 0;
 }
 
@@ -316,30 +216,12 @@ static int setAngularVelocity(lua_State *L)
     float z = lua_tonumber(L,-1);
     lua_pop(L,1);
 
-    lua_getfield(L, -1, "id");
-    int id = lua_tointeger(L,-1);
-    lua_pop(L,2);
+    dynamic *object = popDynamic(L);
 
-    if(id < 0)
-    {
-        error("bad id " + std::to_string(id));
+    if(!object)
         return 0;
-    }
 
-    for(unsigned int a = 0; a<common_lua->dynamics.size(); a++)
-    {
-        dynamic *d = common_lua->dynamics[a];
-        if(d)
-        {
-            if(d->serverID == id)
-            {
-                d->setAngularVelocity(btVector3(x,y,z));
-                return 0;
-            }
-        }
-    }
-
-    error("bad id " + std::to_string(id));
+    object->setAngularVelocity(btVector3(x,y,z));
     return 0;
 }
 
@@ -355,43 +237,21 @@ static int setRotation(lua_State *L)
     float z = lua_tonumber(L,-1);
     lua_pop(L,1);
 
-    lua_getfield(L, -1, "id");
-    int id = lua_tointeger(L,-1);
-    lua_pop(L,2);
+    dynamic *object = popDynamic(L);
 
-    if(id < 0)
-    {
-        error("bad id " + std::to_string(id));
+    if(!object)
         return 0;
-    }
 
-    for(unsigned int a = 0; a<common_lua->dynamics.size(); a++)
+    btTransform t = object->getWorldTransform();
+    t.setRotation(btQuaternion(x,y,z,w));
+    object->setWorldTransform(t);
+
+    if(object->isPlayer)
     {
-        dynamic *d = common_lua->dynamics[a];
-        if(d)
-        {
-            if(d->serverID == id)
-            {
-                btTransform t = d->getWorldTransform();
-                t.setRotation(btQuaternion(x,y,z,w));
-                d->setWorldTransform(t);
-
-                if(d->isPlayer)
-                {
-                    for(int b = 0; b<common_lua->users.size(); b++)
-                    {
-                        if(common_lua->users[b]->controlling == d)
-                        {
-                            common_lua->users[b]->forceTransformUpdate();
-                        }
-                    }
-                }
-                return 0;
-            }
-        }
+        for(int b = 0; b<common_lua->users.size(); b++)
+            if(common_lua->users[b]->controlling == object)
+                common_lua->users[b]->forceTransformUpdate();
     }
-
-    error("bad id " + std::to_string(id));
     return 0;
 }
 
@@ -401,30 +261,12 @@ static int setRestitution(lua_State *L)
     float rest = lua_tonumber(L,-1);
     lua_pop(L,1);
 
-    lua_getfield(L, -1, "id");
-    int id = lua_tointeger(L,-1);
-    lua_pop(L,2);
+    dynamic *object = popDynamic(L);
 
-    if(id < 0)
-    {
-        error("bad id " + std::to_string(id));
+    if(!object)
         return 0;
-    }
 
-    for(unsigned int a = 0; a<common_lua->dynamics.size(); a++)
-    {
-        dynamic *d = common_lua->dynamics[a];
-        if(d)
-        {
-            if(d->serverID == id)
-            {
-                d->setRestitution(rest);
-                return 0;
-            }
-        }
-    }
-
-    error("bad id " + std::to_string(id));
+    object->setRestitution(rest);
     return 0;
 }
 
@@ -432,39 +274,20 @@ static int getPosition(lua_State *L)
 {
     scope("getDynamicPositionLua");
 
-    lua_getfield(L, -1, "id");
-    int id = lua_tointeger(L,-1);
-    lua_pop(L,2);
+    dynamic *object = popDynamic(L);
 
-    if(id < 0)
+    if(!object)
     {
-        error("bad id " + std::to_string(id));
         lua_pushnil(L);
         lua_pushnil(L);
         lua_pushnil(L);
         return 3;
     }
 
-    for(unsigned int a = 0; a<common_lua->dynamics.size(); a++)
-    {
-        dynamic *d = common_lua->dynamics[a];
-        if(d)
-        {
-            if(d->serverID == id)
-            {
-                btVector3 pos = d->getWorldTransform().getOrigin();
-                lua_pushnumber(L,pos.x());
-                lua_pushnumber(L,pos.y());
-                lua_pushnumber(L,pos.z());
-                return 3;
-            }
-        }
-    }
-
-    error("bad id " + std::to_string(id));
-    lua_pushnil(L);
-    lua_pushnil(L);
-    lua_pushnil(L);
+    btVector3 pos = object->getWorldTransform().getOrigin();
+    lua_pushnumber(L,pos.x());
+    lua_pushnumber(L,pos.y());
+    lua_pushnumber(L,pos.z());
     return 3;
 }
 
@@ -472,39 +295,20 @@ static int getVelocity(lua_State *L)
 {
     scope("getDynamicVelocityLua");
 
-    lua_getfield(L, -1, "id");
-    int id = lua_tointeger(L,-1);
-    lua_pop(L,2);
+    dynamic *object = popDynamic(L);
 
-    if(id < 0)
+    if(!object)
     {
-        error("bad id " + std::to_string(id));
         lua_pushnil(L);
         lua_pushnil(L);
         lua_pushnil(L);
         return 3;
     }
 
-    for(unsigned int a = 0; a<common_lua->dynamics.size(); a++)
-    {
-        dynamic *d = common_lua->dynamics[a];
-        if(d)
-        {
-            if(d->serverID == id)
-            {
-                btVector3 vel = d->getLinearVelocity();
-                lua_pushnumber(L,vel.x());
-                lua_pushnumber(L,vel.y());
-                lua_pushnumber(L,vel.z());
-                return 3;
-            }
-        }
-    }
-
-    error("bad id " + std::to_string(id));
-    lua_pushnil(L);
-    lua_pushnil(L);
-    lua_pushnil(L);
+    btVector3 vel = object->getLinearVelocity();
+    lua_pushnumber(L,vel.x());
+    lua_pushnumber(L,vel.y());
+    lua_pushnumber(L,vel.z());
     return 3;
 }
 
@@ -512,39 +316,20 @@ static int getAngularVelocity(lua_State *L)
 {
     scope("getDynamicAngularVelocityLua");
 
-    lua_getfield(L, -1, "id");
-    int id = lua_tointeger(L,-1);
-    lua_pop(L,2);
+    dynamic *object = popDynamic(L);
 
-    if(id < 0)
+    if(!object)
     {
-        error("bad id " + std::to_string(id));
         lua_pushnil(L);
         lua_pushnil(L);
         lua_pushnil(L);
         return 3;
     }
 
-    for(unsigned int a = 0; a<common_lua->dynamics.size(); a++)
-    {
-        dynamic *d = common_lua->dynamics[a];
-        if(d)
-        {
-            if(d->serverID == id)
-            {
-                btVector3 vel = d->getAngularVelocity();
-                lua_pushnumber(L,vel.x());
-                lua_pushnumber(L,vel.y());
-                lua_pushnumber(L,vel.z());
-                return 3;
-            }
-        }
-    }
-
-    error("bad id " + std::to_string(id));
-    lua_pushnil(L);
-    lua_pushnil(L);
-    lua_pushnil(L);
+    btVector3 vel = object->getAngularVelocity();
+    lua_pushnumber(L,vel.x());
+    lua_pushnumber(L,vel.y());
+    lua_pushnumber(L,vel.z());
     return 3;
 }
 
@@ -552,13 +337,10 @@ static int getRotation(lua_State *L)
 {
     scope("getDynamicRotation");
 
-    lua_getfield(L, -1, "id");
-    int id = lua_tointeger(L,-1);
-    lua_pop(L,2);
+    dynamic *object = popDynamic(L);
 
-    if(id < 0)
+    if(!object)
     {
-        error("bad id " + std::to_string(id));
         lua_pushnil(L);
         lua_pushnil(L);
         lua_pushnil(L);
@@ -566,28 +348,11 @@ static int getRotation(lua_State *L)
         return 4;
     }
 
-    for(unsigned int a = 0; a<common_lua->dynamics.size(); a++)
-    {
-        dynamic *d = common_lua->dynamics[a];
-        if(d)
-        {
-            if(d->serverID == id)
-            {
-                btQuaternion quat = d->getWorldTransform().getRotation();
-                lua_pushnumber(L,quat.w());
-                lua_pushnumber(L,quat.x());
-                lua_pushnumber(L,quat.y());
-                lua_pushnumber(L,quat.z());
-                return 4;
-            }
-        }
-    }
-
-    error("bad id " + std::to_string(id));
-    lua_pushnil(L);
-    lua_pushnil(L);
-    lua_pushnil(L);
-    lua_pushnil(L);
+    btQuaternion quat = object->getWorldTransform().getRotation();
+    lua_pushnumber(L,quat.w());
+    lua_pushnumber(L,quat.x());
+    lua_pushnumber(L,quat.y());
+    lua_pushnumber(L,quat.z());
     return 4;
 }
 
@@ -601,29 +366,12 @@ static int removeDynamic(lua_State *L)
 {
     scope("removeDynamicLua");
 
-    lua_getfield(L, -1, "id");
-    int id = lua_tointeger(L,-1);
-    lua_pop(L,2);
+    dynamic *object = popDynamic(L);
 
-    if(id < 0)
-    {
-        error("bad id " + std::to_string(id));
+    if(!object)
         return 0;
-    }
 
-    for(unsigned int a = 0; a<common_lua->dynamics.size(); a++)
-    {
-        dynamic *d = common_lua->dynamics[a];
-        if(d)
-        {
-            if(d->serverID == id)
-            {
-                common_lua->removeDynamic(d);
-                return 0;
-            }
-        }
-    }
-
+    common_lua->removeDynamic(object);
     return 0;
 }
 
@@ -662,38 +410,20 @@ static int setShapeName(lua_State *L)
         return 0;
     }
 
-    lua_getfield(L, -1, "id");
-    int id = lua_tointeger(L,-1);
-    lua_pop(L,2);
+    dynamic *object = popDynamic(L);
 
-    if(id < 0)
-    {
-        error("bad id " + std::to_string(id));
+    if(!object)
         return 0;
-    }
 
-    for(unsigned int a = 0; a<common_lua->dynamics.size(); a++)
+    if(args == 2)
     {
-        dynamic *d = common_lua->dynamics[a];
-        if(d)
-        {
-            if(d->serverID == id)
-            {
-                if(args == 2)
-                {
-                    r = d->shapeNameR;
-                    g = d->shapeNameG;
-                    b = d->shapeNameB;
-                }
-
-                common_lua->setShapeName(d,name,r,g,b);
-
-                return 0;
-            }
-        }
+        r = object->shapeNameR;
+        g = object->shapeNameG;
+        b = object->shapeNameB;
     }
 
-    error("bad id " + std::to_string(id));
+    common_lua->setShapeName(object,name,r,g,b);
+
     return 0;
 }
 
@@ -724,13 +454,7 @@ static int addDynamic(lua_State *L)
     dynamic *tmp = common_lua->addDynamic(typeID,0,0,0);
     int idx = tmp->serverID;
 
-    //Register an instance of dynamic
-    lua_newtable(L);
-    lua_getglobal(L,"dynamic");
-    lua_setmetatable(L,-2);
-    lua_pushinteger(L,idx);
-    lua_setfield(L,-2,"id");
-
+    pushDynamic(L,tmp);
     return 1;
 }
 
@@ -764,25 +488,12 @@ static int setNodeColor(lua_State *L)
         return 0;
     }
 
-    lua_getfield(L, -1, "id");
-    int id = lua_tointeger(L,-1);
-    lua_pop(L,2);
+    dynamic *object = popDynamic(L);
 
+    if(!object)
+        return 0;
 
-    for(unsigned int a = 0; a<common_lua->dynamics.size(); a++)
-    {
-        dynamic *d = common_lua->dynamics[a];
-        if(d)
-        {
-            if(d->serverID == id)
-            {
-                d->setNodeColor(nodename,btVector3(r,g,b),common_lua->theServer);
-                return 0;
-            }
-        }
-    }
-
-    error("Invalid dynamic object!");
+    object->setNodeColor(nodename,btVector3(r,g,b),common_lua->theServer);
     return 0;
 }
 
@@ -797,26 +508,8 @@ static int attachByRope(lua_State *L)
         return 0;
     }
 
-    lua_getfield(L, -1, "id");
-    int ida = lua_tointeger(L,-1);
-    lua_pop(L,2);
-
-    lua_getfield(L, -1, "id");
-    int idb = lua_tointeger(L,-1);
-    lua_pop(L,2);
-
-    dynamic *a=0,*b=0;
-
-    for(int i = 0; i<common_lua->dynamics.size(); i++)
-    {
-        if(common_lua->dynamics[i]->serverID == ida)
-            a = common_lua->dynamics[i];
-        else if(common_lua->dynamics[i]->serverID == idb)
-            b = common_lua->dynamics[i];
-
-        if(a && b)
-            break;
-    }
+    dynamic *a = popDynamic(L);
+    dynamic *b = popDynamic(L);
 
     if(!a || !b)
     {
@@ -841,26 +534,8 @@ static int attachByHinge(lua_State *L)
         return 0;
     }
 
-    lua_getfield(L, -1, "id");
-    int ida = lua_tointeger(L,-1);
-    lua_pop(L,2);
-
-    lua_getfield(L, -1, "id");
-    int idb = lua_tointeger(L,-1);
-    lua_pop(L,2);
-
-    dynamic *a=0,*b=0;
-
-    for(int i = 0; i<common_lua->dynamics.size(); i++)
-    {
-        if(common_lua->dynamics[i]->serverID == ida)
-            a = common_lua->dynamics[i];
-        else if(common_lua->dynamics[i]->serverID == idb)
-            b = common_lua->dynamics[i];
-
-        if(a && b)
-            break;
-    }
+    dynamic *a = popDynamic(L);
+    dynamic *b = popDynamic(L);
 
     if(!a || !b)
     {
@@ -889,30 +564,23 @@ static int getHeldTool(lua_State *L)
         return 1;
     }
 
-    lua_getfield(L, -1, "id");
-    int ida = lua_tointeger(L,-1);
-    lua_pop(L,2);
+    dynamic *object = popDynamic(L);
 
-    for(int i = 0; i<common_lua->dynamics.size(); i++)
+    if(!object)
     {
-        if(common_lua->dynamics[i]->serverID == ida)
-        {
-            dynamic *d = common_lua->dynamics[i];
-            if(d->lastHeldSlot == -1 || d->lastHeldSlot < 0 || d->lastHeldSlot >= inventorySize)
-                lua_pushnil(L);
-            else
-            {
-                if(!d->holding[d->lastHeldSlot])
-                    lua_pushnil(L);
-                else
-                    lua_pushstring(L,d->holding[d->lastHeldSlot]->heldItemType->uiName.c_str());
-            }
-            return 1;
-        }
+        lua_pushnil(L);
+        return 1;
     }
 
-    error("No dynamic found!");
-    lua_pushnil(L);
+    if(object->lastHeldSlot == -1 || object->lastHeldSlot < 0 || object->lastHeldSlot >= inventorySize)
+        lua_pushnil(L);
+    else
+    {
+        if(!object->holding[object->lastHeldSlot])
+            lua_pushnil(L);
+        else
+            lua_pushstring(L,object->holding[object->lastHeldSlot]->heldItemType->uiName.c_str());
+    }
     return 1;
 }
 

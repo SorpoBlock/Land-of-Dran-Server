@@ -2,7 +2,7 @@
 #define LIVINGBRICK_H_INCLUDED
 
 #include "code/brick.h"
-#include "code/player.h"
+#include "code/dynamic.h"
 
 #define maxCarBricks 10000
 

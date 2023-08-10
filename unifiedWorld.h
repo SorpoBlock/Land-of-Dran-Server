@@ -3,7 +3,7 @@
 
 #include "code/light.h"
 #include "code/brick.h"
-#include "code/player.h"
+#include "code/dynamic.h"
 #include "code/livingBrick.h"
 #include "code/item.h"
 #include <glm/gtx/quaternion.hpp>

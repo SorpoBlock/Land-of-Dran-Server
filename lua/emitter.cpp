@@ -1,34 +1,5 @@
 #include "emitter.h"
 
-void pushEmitter(lua_State *L,emitter *e)
-{
-    lua_newtable(L);
-    lua_getglobal(L,"emitterMETATABLE");
-    lua_setmetatable(L,-2);
-    lua_pushinteger(L,e->serverID);
-    lua_setfield(L,-2,"id");
-    lua_pushlightuserdata(L,e);
-    lua_setfield(L,-2,"pointer");
-    lua_pushstring(L,"emitter");
-    lua_setfield(L,-2,"type");
-}
-
-emitter *popEmitter(lua_State *L)
-{
-    int args = lua_gettop(L);
-    if(args < 1)
-        return 0;
-    if(lua_istable(L,-1))
-    {
-        lua_getfield(L, -1, "pointer");
-        emitter *ret = (emitter*)lua_touserdata(L,-1);
-        lua_pop(L,2);
-        return ret;
-    }
-    else
-        return 0;
-}
-
 static int LUAemitterToString(lua_State *L)
 {
     lua_getfield(L, -1, "id");

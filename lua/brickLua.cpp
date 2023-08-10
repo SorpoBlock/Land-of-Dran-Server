@@ -32,16 +32,7 @@ static int getBrickIdx(lua_State *L)
         return 1;
     }
 
-    //Register an instance of brick
-    lua_newtable(L);
-    lua_getglobal(L,"brickMETATABLE");
-    lua_setmetatable(L,-2);
-    lua_pushinteger(L,common_lua->bricks[idx]->serverID);
-    lua_setfield(L,-2,"id");
-    lua_pushlightuserdata(L,common_lua->bricks[idx]);
-    lua_setfield(L,-2,"pointer");
-    lua_pushstring(L,"brick");
-    lua_setfield(L,-2,"type");
+    pushBrick(L,common_lua->bricks[idx]);
 
     return 1;
 }
@@ -108,15 +99,7 @@ static int getNamedBrickIdx(lua_State *L)
                 return 1;
             }
 
-            lua_newtable(L);
-            lua_getglobal(L,"brickMETATABLE");
-            lua_setmetatable(L,-2);
-            lua_pushinteger(L,common_lua->namedBricks[a].bricks[idx]->serverID);
-            lua_setfield(L,-2,"id");
-            lua_pushlightuserdata(L,common_lua->namedBricks[a].bricks[idx]);
-            lua_setfield(L,-2,"pointer");
-            lua_pushstring(L,"brick");
-            lua_setfield(L,-2,"type");
+            pushBrick(L,common_lua->namedBricks[a].bricks[idx]);
 
             return 1;
         }
@@ -148,13 +131,6 @@ static int getBrickAt(lua_State *L)
     x += brickTreeSize;
     z += brickTreeSize;
 
-    /*brick *result = common_lua->tree->at(x,y,z);
-    if(!result)
-    {
-        lua_pushnil(L);
-        return 1;
-    }*/
-
     double fxd = x;
     double fyd = y;
     double fzd = z;
@@ -185,15 +161,7 @@ static int getBrickAt(lua_State *L)
         return 1;
     }
 
-    lua_newtable(L);
-    lua_getglobal(L,"brickMETATABLE");
-    lua_setmetatable(L,-2);
-    lua_pushinteger(L,lastBrickAtHit->serverID);
-    lua_setfield(L,-2,"id");
-    lua_pushlightuserdata(L,lastBrickAtHit);
-    lua_setfield(L,-2,"pointer");
-    lua_pushstring(L,"brick");
-    lua_setfield(L,-2,"type");
+    pushBrick(L,lastBrickAtHit);
 
     return 1;
 }
@@ -202,9 +170,7 @@ static int getBrickName(lua_State *L)
 {
     scope("getBrickName");
 
-    lua_getfield(L, -1, "pointer");
-    brick *passedBrick = (brick*)lua_touserdata(L,-1);
-    lua_pop(L,2);
+    brick *passedBrick = popBrick(L);
 
     if(!passedBrick)
     {
@@ -221,9 +187,7 @@ static int getBrickPosition(lua_State *L)
 {
     scope("getBrickPosition");
 
-    lua_getfield(L, -1, "pointer");
-    brick *passedBrick = (brick*)lua_touserdata(L,-1);
-    lua_pop(L,2);
+    brick *passedBrick = popBrick(L);
 
     if(!passedBrick)
     {
@@ -242,9 +206,7 @@ static int getBrickColor(lua_State *L)
 {
     scope("getBrickColor");
 
-    lua_getfield(L, -1, "pointer");
-    brick *passedBrick = (brick*)lua_touserdata(L,-1);
-    lua_pop(L,2);
+    brick *passedBrick = popBrick(L);
 
     if(!passedBrick)
     {
@@ -264,9 +226,7 @@ static int getBrickDimensions(lua_State *L)
 {
     scope("getBrickDimensions");
 
-    lua_getfield(L, -1, "pointer");
-    brick *passedBrick = (brick*)lua_touserdata(L,-1);
-    lua_pop(L,2);
+    brick *passedBrick = popBrick(L);
 
     if(!passedBrick)
     {
@@ -285,9 +245,7 @@ static int isBrickSpecial(lua_State *L)
 {
     scope("isBrickSpecial");
 
-    lua_getfield(L, -1, "pointer");
-    brick *passedBrick = (brick*)lua_touserdata(L,-1);
-    lua_pop(L,2);
+    brick *passedBrick = popBrick(L);
 
     if(!passedBrick)
     {
@@ -304,9 +262,7 @@ static int getBrickTypeID(lua_State *L)
 {
     scope("getBrickTypeID");
 
-    lua_getfield(L, -1, "pointer");
-    brick *passedBrick = (brick*)lua_touserdata(L,-1);
-    lua_pop(L,2);
+    brick *passedBrick = popBrick(L);
 
     if(!passedBrick)
     {
@@ -331,9 +287,7 @@ static int getBrickOwner(lua_State *L)
 {
     scope("getBrickOwner");
 
-    lua_getfield(L, -1, "pointer");
-    brick *passedBrick = (brick*)lua_touserdata(L,-1);
-    lua_pop(L,2);
+    brick *passedBrick = popBrick(L);
 
     if(!passedBrick)
     {
@@ -352,11 +306,7 @@ static int getBrickOwner(lua_State *L)
     {
         if(common_lua->users[a]->accountID == (unsigned int)passedBrick->builtBy)
         {
-            lua_newtable(L);
-            lua_getglobal(L,"client");
-            lua_setmetatable(L,-2);
-            lua_pushinteger(L,common_lua->users[a]->playerID);
-            lua_setfield(L,-2,"id");
+            pushClient(L,common_lua->users[a]);
             return 1;
         }
     }
@@ -369,9 +319,7 @@ static int removeBrick(lua_State *L)
 {
     scope("removeBrick");
 
-    lua_getfield(L, -1, "pointer");
-    brick *passedBrick = (brick*)lua_touserdata(L,-1);
-    lua_pop(L,2);
+    brick *passedBrick = popBrick(L);
 
     if(!passedBrick)
     {
@@ -391,9 +339,7 @@ static int setBrickColliding(lua_State *L)
     bool colliding = lua_toboolean(L,-1);
     lua_pop(L,1);
 
-    lua_getfield(L, -1, "pointer");
-    brick *passedBrick = (brick*)lua_touserdata(L,-1);
-    lua_pop(L,2);
+    brick *passedBrick = popBrick(L);
 
     if(!passedBrick)
     {
@@ -450,9 +396,7 @@ static int setBrickColor(lua_State *L)
     float r = lua_tonumber(L,-1);
     lua_pop(L,1);
 
-    lua_getfield(L, -1, "pointer");
-    brick *passedBrick = (brick*)lua_touserdata(L,-1);
-    lua_pop(L,2);
+    brick *passedBrick = popBrick(L);
 
     if(!passedBrick)
     {
@@ -476,9 +420,7 @@ static int setBrickPosition(lua_State *L)
     float x = lua_tonumber(L,-1);
     lua_pop(L,1);
 
-    lua_getfield(L, -1, "pointer");
-    brick *passedBrick = (brick*)lua_touserdata(L,-1);
-    lua_pop(L,2);
+    brick *passedBrick = popBrick(L);
 
     if(!passedBrick)
     {
@@ -512,9 +454,7 @@ static int setBrickName(lua_State *L)
         return 0;
     }
 
-    lua_getfield(L, -1, "pointer");
-    brick *passedBrick = (brick*)lua_touserdata(L,-1);
-    lua_pop(L,2);
+    brick *passedBrick = popBrick(L);
 
     if(!passedBrick)
     {
@@ -534,9 +474,7 @@ static int setBrickAngleID(lua_State *L)
     int angleID = lua_tointeger(L,-1);
     lua_pop(L,1);
 
-    lua_getfield(L, -1, "pointer");
-    brick *passedBrick = (brick*)lua_touserdata(L,-1);
-    lua_pop(L,2);
+    brick *passedBrick = popBrick(L);
 
     if(!passedBrick)
     {
@@ -650,15 +588,7 @@ static int addBasicBrickLua(lua_State *L)
     }
 
     //Register an instance of brick
-    lua_newtable(L);
-    lua_getglobal(L,"brickMETATABLE");
-    lua_setmetatable(L,-2);
-    lua_pushinteger(L,tmp->serverID);
-    lua_setfield(L,-2,"id");
-    lua_pushlightuserdata(L,tmp);
-    lua_setfield(L,-2,"pointer");
-    lua_pushstring(L,"brick");
-    lua_setfield(L,-2,"type");
+    pushBrick(L,tmp);
 
     return 1;
 }
@@ -755,15 +685,7 @@ static int addSpecialBrickLua(lua_State *L)
     common_lua->addBrick(tmp,false,true,true);
 
     //Register an instance of brick
-    lua_newtable(L);
-    lua_getglobal(L,"brickMETATABLE");
-    lua_setmetatable(L,-2);
-    lua_pushinteger(L,tmp->serverID);
-    lua_setfield(L,-2,"id");
-    lua_pushlightuserdata(L,tmp);
-    lua_setfield(L,-2,"pointer");
-    lua_pushstring(L,"brick");
-    lua_setfield(L,-2,"type");
+    pushBrick(L,tmp);
 
     return 1;
 }
@@ -815,62 +737,6 @@ static int getSpecialType(lua_State *L)
     return 1;
 }
 
-static int setPrint(lua_State *L)
-{
-    scope("setPrint");
-
-    int args = lua_gettop(L);
-    if(args != 2)
-    {
-        error("This function requires two arguments!");
-        return 0;
-    }
-
-    const char *str = lua_tostring(L,-1);
-    lua_pop(L,1);
-    if(!str)
-    {
-        error("Error getting string argument!");
-        return 0;
-    }
-
-    lua_getfield(L, -1, "pointer");
-    brick *passedBrick = (brick*)lua_touserdata(L,-1);
-    lua_pop(L,2);
-
-    if(!passedBrick)
-    {
-        error("Invalid brick pointer!");
-        return 0;
-    }
-
-    std::string rightCase = "";
-    int foundPrint = -1;
-    for(int a = 0; a<common_lua->brickTypes->printNames.size(); a++)
-    {
-        if(lowercase(common_lua->brickTypes->printNames[a]) == lowercase(str))
-        {
-            rightCase = common_lua->brickTypes->printNames[a];
-            foundPrint = a;
-            break;
-        }
-    }
-
-    if(foundPrint == -1)
-    {
-        error("Could not find print");
-        return 0;
-    }
-
-    passedBrick->printID = foundPrint;
-    passedBrick->printName = rightCase;
-    passedBrick->printMask = 0b100;
-
-    packet update;
-    passedBrick->createUpdatePacket(&update);
-    common_lua->theServer->send(&update,true);
-}
-
 static int getOwnerID(lua_State *L)
 {
     scope("getOwnerID");
@@ -883,9 +749,7 @@ static int getOwnerID(lua_State *L)
         return 1;
     }
 
-    lua_getfield(L, -1, "pointer");
-    brick *passedBrick = (brick*)lua_touserdata(L,-1);
-    lua_pop(L,2);
+    brick *passedBrick = popBrick(L);
 
     if(!passedBrick)
     {
@@ -916,7 +780,6 @@ void registerBrickFunctions(lua_State *L)
         {"setColor",setBrickColor},
         {"setPosition",setBrickPosition},
         {"setAngleID",setBrickAngleID},
-        //{"setPrint",setPrint},
         {"getOwnerID",getOwnerID},
         {NULL,NULL}};
     luaL_newmetatable(L,"brickMETATABLE");

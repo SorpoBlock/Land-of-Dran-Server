@@ -2,6 +2,7 @@
 #define EMITTER_H_INCLUDED
 
 #include "code/unifiedWorld.h"
+#include "code/lua/pushPopClasses.h"
 
 extern unifiedWorld *common_lua;
 
