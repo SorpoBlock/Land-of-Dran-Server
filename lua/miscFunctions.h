@@ -564,13 +564,13 @@ static int saveBuild(lua_State *L)
         if(common_lua->bricks[a]->isSpecial)
             continue;
 
-        charBuf = common_lua->bricks[a]->r *= 255;
+        charBuf = common_lua->bricks[a]->r * 255;
         saveFile.write((char*)&charBuf,sizeof(unsigned char));
-        charBuf = common_lua->bricks[a]->g *= 255;
+        charBuf = common_lua->bricks[a]->g * 255;
         saveFile.write((char*)&charBuf,sizeof(unsigned char));
-        charBuf = common_lua->bricks[a]->b *= 255;
+        charBuf = common_lua->bricks[a]->b * 255;
         saveFile.write((char*)&charBuf,sizeof(unsigned char));
-        charBuf = common_lua->bricks[a]->a *= 255;
+        charBuf = common_lua->bricks[a]->a * 255;
         saveFile.write((char*)&charBuf,sizeof(unsigned char));
 
         floatBuf = common_lua->bricks[a]->posX + (common_lua->bricks[a]->xHalfPosition ? 0.5 : 0.0);
@@ -582,10 +582,13 @@ static int saveBuild(lua_State *L)
         saveFile.write((char*)&floatBuf,sizeof(float));
 
         charBuf = common_lua->bricks[a]->width;
+        //std::cout<<"Dims: "<<(int)charBuf<<" ";
         saveFile.write((char*)&charBuf,sizeof(unsigned char));
         charBuf = common_lua->bricks[a]->height;
+        //std::cout<<(int)charBuf<<" ";
         saveFile.write((char*)&charBuf,sizeof(unsigned char));
         charBuf = common_lua->bricks[a]->length;
+        //std::cout<<(int)charBuf<<"\n";
         saveFile.write((char*)&charBuf,sizeof(unsigned char));
         charBuf = common_lua->bricks[a]->printMask;
         saveFile.write((char*)&charBuf,sizeof(unsigned char));
@@ -608,13 +611,13 @@ static int saveBuild(lua_State *L)
         if(!common_lua->bricks[a]->isSpecial)
             continue;
 
-        charBuf = common_lua->bricks[a]->r *= 255;
+        charBuf = common_lua->bricks[a]->r * 255;
         saveFile.write((char*)&charBuf,sizeof(unsigned char));
-        charBuf = common_lua->bricks[a]->g *= 255;
+        charBuf = common_lua->bricks[a]->g * 255;
         saveFile.write((char*)&charBuf,sizeof(unsigned char));
-        charBuf = common_lua->bricks[a]->b *= 255;
+        charBuf = common_lua->bricks[a]->b * 255;
         saveFile.write((char*)&charBuf,sizeof(unsigned char));
-        charBuf = common_lua->bricks[a]->a *= 255;
+        charBuf = common_lua->bricks[a]->a * 255;
         saveFile.write((char*)&charBuf,sizeof(unsigned char));
 
         floatBuf = common_lua->bricks[a]->posX + (common_lua->bricks[a]->xHalfPosition ? 0.5 : 0.0);

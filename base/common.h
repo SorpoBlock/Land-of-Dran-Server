@@ -50,7 +50,6 @@ using namespace std::chrono;
 #define packetTypeBitsFromClient 4
 
 #define packetType_connectionRepsonse 0
-//#define packetType_addDynamic 1
 #define packetType_addRemoveDynamic 1
 #define packetType_addDynamicType 2
 #define packetType_addSpecialBrickType 3
@@ -58,21 +57,17 @@ using namespace std::chrono;
 #define packetType_addBricks 5
 #define packetType_skipBricksCompile 6
 #define packetType_updateDynamicTransforms 7
-//#define packetType_removeDynamic 8
 #define packetType_addRemoveLight 8
 #define packetType_removeBrick 9
 #define packetType_addBricksToBuiltCar 10
 #define packetType_luaPasswordResponse 11
 #define packetType_setColorPalette 12
 #define packetType_clientPhysicsData 13
-//#define packetType_clientLuaConsoleText 13
-//#define packetType_addGUIText 14
 #define packetType_ping 14
 #define packetType_removeBrickVehicle 15
 #define packetType_setShapeName 16
 #define packetType_addItemType 17
 #define packetType_addRemoveItem 18
-//#define packetType_addItem 18
 #define packetType_addSoundType 19
 #define packetType_playSound 20
 #define packetType_forceWrenchDialog 21
@@ -80,7 +75,6 @@ using namespace std::chrono;
 #define packetType_addOrRemovePlayer 23
 #define packetType_updateBrick 24
 #define packetType_debugLocs 25
-//#define packetType_removeItem 26
 #define packetType_addRemoveRope 26
 #define packetType_addMessage 27
 #define packetType_setNodeColors 28

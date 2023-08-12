@@ -988,8 +988,22 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
         }
         case evalCode:
         {
+            if(!common->useLuaPassword)
+            {
+                error("Received eval code even though eval is turned off!");
+                return;
+            }
+
+            if(!source->hasLuaAccess)
+            {
+                error("Received eval code from user who did not have access!");
+                return;
+            }
+
             std::string code = data->readString();
-            info(source->name + " is executing code " + code);
+            std::string codeToEcho = code;
+            replaceAll(codeToEcho,"[","\\[");
+            info(source->name + " is executing code " + codeToEcho);
             if(code.length() < 1)
                 return;
             if(luaL_dostring(common->luaState,code.c_str()) != LUA_OK)

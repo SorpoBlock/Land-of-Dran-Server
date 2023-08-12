@@ -1112,9 +1112,7 @@ int main(int argc, char *argv[])
                 packet transformPacket;
                 transformPacket.writeUInt(packetType_updateDynamicTransforms,packetTypeBits);
                 transformPacket.writeUInt(getServerTime(),32);
-                //transformPacket.writeUInt(msDiff,8);
                 transformPacket.writeUInt(dynamicsSentThisPacket,8);
-                //transformPacket.writeUInt(common.lastSnapshotID,20);
 
                 for(unsigned int a = dynamicsSentSoFar; a<dynamicsSentSoFar+dynamicsSentThisPacket+dynamicsSkippedThisPacket; a++)
                     common.dynamics[a]->addToPacket(&transformPacket);

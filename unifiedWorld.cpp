@@ -1958,6 +1958,7 @@ void unifiedWorld::loadLodSave(std::string filePath)
         bls.read((char*)&g,sizeof(unsigned char));
         bls.read((char*)&b,sizeof(unsigned char));
         bls.read((char*)&alpha,sizeof(unsigned char));
+        //std::cout<<"OB Alpha: "<<(int)alpha;
 
         float x,y,z;
         bls.read((char*)&x,sizeof(float));
@@ -2015,6 +2016,8 @@ void unifiedWorld::loadLodSave(std::string filePath)
         tmp->b /= 255.0;
         tmp->a /= 255.0;
 
+        //std::cout<<" "<<tmp->a<<"\n";
+
         tmp->angleID = angleID;
         tmp->material = material;
 
@@ -2044,6 +2047,7 @@ void unifiedWorld::loadLodSave(std::string filePath)
         bls.read((char*)&g,sizeof(unsigned char));
         bls.read((char*)&b,sizeof(unsigned char));
         bls.read((char*)&alpha,sizeof(unsigned char));
+        //std::cout<<"TB alpha: "<<(int)alpha;
 
         float x,y,z;
         bls.read((char*)&x,sizeof(float));
@@ -2100,6 +2104,7 @@ void unifiedWorld::loadLodSave(std::string filePath)
         tmp->g /= 255.0;
         tmp->b /= 255.0;
         tmp->a /= 255.0;
+        //std::cout<<" "<<tmp->a<<"\n";
 
         tmp->angleID = angleID;
         tmp->material = material;
