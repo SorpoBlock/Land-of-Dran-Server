@@ -28,16 +28,19 @@ void clientData::forceTransformUpdate()
 
 void clientData::setControlling(dynamic *player)
 {
-    controlling = player;
-
-    if(!player)
+    if(controlling && (player != controlling))
     {
         packet removePhysicsData;
         removePhysicsData.writeUInt(packetType_clientPhysicsData,packetTypeBits);
         removePhysicsData.writeUInt(2,2); //subtype 2, delete client physics object (for old player if it exists)
+        removePhysicsData.writeUInt(controlling->serverID,dynamicObjectIDBits);
         netRef->send(&removePhysicsData,true);
-        return;
     }
+
+    controlling = player;
+
+    if(!controlling)
+        return;
 
     packet physicsData;
     physicsData.writeUInt(packetType_clientPhysicsData,packetTypeBits);
@@ -356,8 +359,8 @@ void unifiedWorld::sendDecals(serverClientHandle *target)
         }
 
         packet data;
-        data.writeUInt(packetType_waterOrDecal,packetTypeBits);
-        data.writeBit(false); //decals, not water
+        data.writeUInt(packetType_serverCommand,packetTypeBits);
+        data.writeString("sendDecals");
         data.writeUInt(toSendThisTime,7);
 
         for(int a = sentSoFar; a<sentSoFar+toSendThisTime; a++)
@@ -391,7 +394,7 @@ void unifiedWorld::messageAll(std::string text,std::string category)
     theServer->send(&data,true);
 }
 
-void unifiedWorld::playSound(std::string scriptName)
+void unifiedWorld::playSound(std::string scriptName,float pitch)
 {
     int idx = -1;
     for(unsigned int a = 0; a<soundScriptNames.size(); a++)
@@ -413,6 +416,7 @@ void unifiedWorld::playSound(std::string scriptName)
     data.writeUInt(idx,10);
     data.writeBit(false);
     data.writeBit(true);
+    data.writeFloat(pitch);
     theServer->send(&data,true);
 }
 
@@ -493,6 +497,7 @@ void unifiedWorld::playSound(int soundId,float x,float y,float z,bool loop,int l
     data.writeFloat(x);
     data.writeFloat(y);
     data.writeFloat(z);
+    data.writeFloat(pitch);
     theServer->send(&data,true);
 }
 
@@ -553,7 +558,7 @@ void unifiedWorld::playSound(std::string scriptName,float x,float y,float z,bool
     playSound(idx,x,y,z,loop,loopId);
 }
 
-void unifiedWorld::playSoundExcept(std::string scriptName,float x,float y,float z,clientData *except)
+void unifiedWorld::playSoundExcept(std::string scriptName,float x,float y,float z,clientData *except,float pitch)
 {
     int idx = -1;
     for(unsigned int a = 0; a<soundScriptNames.size(); a++)
@@ -579,6 +584,7 @@ void unifiedWorld::playSoundExcept(std::string scriptName,float x,float y,float 
     data.writeFloat(x);
     data.writeFloat(y);
     data.writeFloat(z);
+    data.writeFloat(pitch);
     for(int a = 0; a<users.size(); a++)
         if(users[a] != except)
             users[a]->netRef->send(&data,true);
@@ -1864,7 +1870,7 @@ void unifiedWorld::removeDynamic(dynamic *toRemove,bool dontSendPacket)
     }
 }
 
-void unifiedWorld::loadLodSave(std::string filePath)
+void unifiedWorld::loadLodSave(std::string filePath,std::vector<brick*> &loadedBricks)
 {
     int start = SDL_GetTicks();
     std::ifstream bls(filePath.c_str(),std::ios::binary);
@@ -2027,6 +2033,7 @@ void unifiedWorld::loadLodSave(std::string filePath)
 
         tmp->printMask = flags;
 
+        loadedBricks.push_back(tmp);
         addBrick(tmp,false,true,false);
         brickCount++;
 
@@ -2115,6 +2122,7 @@ void unifiedWorld::loadLodSave(std::string filePath)
 
         tmp->printMask = flags;
 
+        loadedBricks.push_back(tmp);
         addBrick(tmp,false,true,false);
         brickCount++;
 
@@ -2204,6 +2212,7 @@ void unifiedWorld::loadLodSave(std::string filePath)
         tmp->height = brickTypes->brickTypes[typeID]->height;
         tmp->length = brickTypes->brickTypes[typeID]->length;
 
+        loadedBricks.push_back(tmp);
         addBrick(tmp,false,true,false);
         brickCount++;
 
@@ -2294,6 +2303,7 @@ void unifiedWorld::loadLodSave(std::string filePath)
         tmp->height = brickTypes->brickTypes[typeID]->height;
         tmp->length = brickTypes->brickTypes[typeID]->length;
 
+        loadedBricks.push_back(tmp);
         addBrick(tmp,false,true,false);
         brickCount++;
 
@@ -2308,7 +2318,7 @@ void unifiedWorld::loadLodSave(std::string filePath)
     info("Loaded " + std::to_string(brickCount) + " bricks in " + std::to_string(SDL_GetTicks()-start) + "ms.");
 }
 
-void unifiedWorld::loadBlocklandSave(std::string filePath)
+void unifiedWorld::loadBlocklandSave(std::string filePath,std::vector<brick*> &loadedBricks)
 {
     int start = SDL_GetTicks();
     std::ifstream bls(filePath.c_str());
@@ -2495,6 +2505,7 @@ void unifiedWorld::loadBlocklandSave(std::string filePath)
         }
 
         int colliding = atoi(words[10].c_str());
+        loadedBricks.push_back(tmp);
         addBrick(tmp,false,colliding,false);
     }
 

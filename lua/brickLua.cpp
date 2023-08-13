@@ -580,12 +580,14 @@ static int addBasicBrickLua(lua_State *L)
     tmp->length = length;
     tmp->height = height;
 
-    if(!common_lua->addBrick(tmp,false,true,true))
+    if(!common_lua->addBrick(tmp,false,true,false))
     {
         delete tmp;
         lua_pushnil(L);
         return 1;
     }
+    else
+        common_lua->bricksAddedThisFrame.push_back(tmp);
 
     //Register an instance of brick
     pushBrick(L,tmp);
@@ -682,7 +684,14 @@ static int addSpecialBrickLua(lua_State *L)
     tmp->angleID = angleID;
     tmp->material = material;
 
-    common_lua->addBrick(tmp,false,true,true);
+    if(!common_lua->addBrick(tmp,false,true,false))
+    {
+        delete tmp;
+        lua_pushnil(L);
+        return 1;
+    }
+    else
+        common_lua->bricksAddedThisFrame.push_back(tmp);
 
     //Register an instance of brick
     pushBrick(L,tmp);

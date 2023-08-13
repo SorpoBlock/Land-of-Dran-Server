@@ -1179,13 +1179,14 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
             theBrick->height = height;
             theBrick->length = length;
 
-            if(!common->addBrick(theBrick,true))
+            if(!common->addBrick(theBrick,true,true,false))
             {
                 source->bottomPrint("Could not plant brick!",4000);
                 delete theBrick;
             }
             else
             {
+                common->bricksAddedThisFrame.push_back(theBrick);
                 source->ownedBricks.push_back(theBrick);
                 common->playSound("ClickPlant",theBrick->getX(),theBrick->getY(),theBrick->getZ(),false);
                 source->undoList.push_back(theBrick->serverID);

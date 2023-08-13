@@ -55,7 +55,7 @@ using namespace std::chrono;
 #define packetType_addSpecialBrickType 3
 #define packetType_cameraDetails 4
 #define packetType_addBricks 5
-#define packetType_skipBricksCompile 6
+#define packetType_serverCommand 6
 #define packetType_updateDynamicTransforms 7
 #define packetType_addRemoveLight 8
 #define packetType_removeBrick 9
@@ -78,7 +78,7 @@ using namespace std::chrono;
 #define packetType_addRemoveRope 26
 #define packetType_addMessage 27
 #define packetType_setNodeColors 28
-#define packetType_waterOrDecal 29
+#define packetType_undefined 29
 #define packetType_newEmitterParticleType 30
 #define packetType_emitterAddRemove 31
 

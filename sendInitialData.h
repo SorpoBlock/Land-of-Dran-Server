@@ -60,8 +60,8 @@ void sendInitalDataFirstHalf(unifiedWorld *common,clientData *source,serverClien
 
     //Water level:
     packet waterLevel;
-    waterLevel.writeUInt(packetType_waterOrDecal,packetTypeBits);
-    waterLevel.writeBit(true); //water, not decals
+    waterLevel.writeUInt(packetType_serverCommand,packetTypeBits);
+    waterLevel.writeString("setWaterLevel");
     waterLevel.writeFloat(common->waterLevel);
     client->send(&waterLevel,true);
 }
@@ -74,36 +74,17 @@ void sendInitialDataSecondHalf(unifiedWorld *common,clientData *source,serverCli
         common->emitterTypes[a]->sendToClient(client);
 
     packet skipCompileData;
-    skipCompileData.writeUInt(packetType_skipBricksCompile,packetTypeBits);
-    skipCompileData.writeBit(false); //This is not a clear all bricks packet
+    skipCompileData.writeUInt(packetType_serverCommand,packetTypeBits);
+    skipCompileData.writeString("skipBricksCompile");
     skipCompileData.writeUInt(common->bricks.size(),24);
     client->send(&skipCompileData,true);
 
-    //source->sendCameraDetails();
-
-    int bricksToSend = common->bricks.size();
-    int bricksSentSoFar = 0;
-    while(bricksToSend > 0)
+    std::vector<packet*> resultPackets;
+    addBrickPacketsFromVector(common->bricks,resultPackets);
+    for(int a = 0; a<resultPackets.size(); a++)
     {
-        int sentThisTime = 0;
-        int bitsLeft = packetMTUbits - (packetTypeBits + 8);
-        while(bitsLeft > 0 && (sentThisTime < bricksToSend))
-        {
-            brick *tmp = common->bricks[sentThisTime + bricksSentSoFar];
-            bitsLeft -= tmp->getPacketBits();
-            sentThisTime++;
-        }
-
-        packet data;
-        data.writeUInt(packetType_addBricks,packetTypeBits);
-        data.writeUInt(sentThisTime,8);
-        for(int a = bricksSentSoFar; a<bricksSentSoFar+sentThisTime; a++)
-            common->bricks[a]->addToPacket(&data);
-
-        client->send(&data,true);
-
-        bricksToSend -= sentThisTime;
-        bricksSentSoFar += sentThisTime;
+        client->send(resultPackets[a],true);
+        delete resultPackets[a];
     }
 
     for(unsigned int a = 0; a<common->dynamics.size(); a++)

@@ -160,6 +160,9 @@ struct brick
     void calcGridFromCarPos(btVector3 carOrigin);
 };
 
+void addBrickPacketsFromVector(std::vector<brick*> toAdd,std::vector<packet*> &result);
+void removeBrickPacketsFromVector(std::vector<brick*> toRemove,std::vector<packet*> &result);
+
 struct brickLoader
 {
     std::vector<std::string> printNames;

@@ -969,6 +969,21 @@ int main(int argc, char *argv[])
             }
             common.tmpScheduleIDsToDelete.clear();
 
+            //Send over batched brick addition and removal packets:
+
+            if(common.bricksAddedThisFrame.size() > 0)
+            {
+                std::vector<packet*> resultPackets;
+                addBrickPacketsFromVector(common.bricksAddedThisFrame,resultPackets);
+                for(int a = 0; a<resultPackets.size(); a++)
+                {
+                    common.theServer->send(resultPackets[a],true);
+                    delete resultPackets[a];
+                }
+
+                common.bricksAddedThisFrame.clear();
+            }
+
             /*for(unsigned int i = 0; i<common.users.size(); i++)
             {
                 if(common.users[i]->debugColors.size() > 0)

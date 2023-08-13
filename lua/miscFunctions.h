@@ -86,8 +86,19 @@ static int playSound(lua_State *L)
     scope("playSound");
 
     int args = lua_gettop(L);
-    if(args == 1)
+    if(args == 1 || args == 2)
     {
+        float pitch = 1.0;
+        if(args == 2)
+        {
+            pitch = lua_tonumber(L,-1);
+            if(pitch < 0)
+                pitch = 0;
+            if(pitch > 10.0)
+                pitch = 10.0;
+            lua_pop(L,1);
+        }
+
         const char *sound = lua_tostring(L,-1);
         lua_pop(L,1);
 
@@ -98,14 +109,25 @@ static int playSound(lua_State *L)
         }
 
         std::string s = std::string(sound);
-        common_lua->playSound(s);
+        common_lua->playSound(s,pitch);
 
         return 0;
     }
-    else if(args == 5)
+    else if(args == 5 || args == 6)
     {
         bool loop = lua_toboolean(L,-1);
         lua_pop(L,1);
+
+        float pitch = 1.0;
+        if(args == 6)
+        {
+            pitch = lua_tonumber(L,-1);
+            if(pitch < 0)
+                pitch = 0;
+            if(pitch > 10.0)
+                pitch = 10.0;
+            lua_pop(L,1);
+        }
 
         float z = lua_tonumber(L,-1);
         lua_pop(L,1);
@@ -124,7 +146,7 @@ static int playSound(lua_State *L)
         }
 
         std::string s = std::string(sound);
-        common_lua->playSound(s,x,y,z,loop);
+        common_lua->playSound(s,x,y,z,loop,pitch);
 
         return 0;
     }
@@ -304,8 +326,8 @@ static int messageAll(lua_State *L)
 static int clearAllBricks(lua_State *L)
 {
     packet clearAllBricksPacket;
-    clearAllBricksPacket.writeUInt(packetType_skipBricksCompile,packetTypeBits);
-    clearAllBricksPacket.writeBit(true); //This is a clear all bricks packet!
+    clearAllBricksPacket.writeUInt(packetType_serverCommand,packetTypeBits);
+    clearAllBricksPacket.writeString("clearAllBricks");
     common_lua->theServer->send(&clearAllBricksPacket,true);
 
     for(int a = 0; a<common_lua->bricks.size(); a++)
@@ -461,38 +483,21 @@ static int loadLodSave(lua_State *L)
         return 0;
     }
 
-    common_lua->loadLodSave(fileName);
+    std::vector<brick*> loadedBricks;
+    common_lua->loadLodSave(fileName,loadedBricks);
 
     packet skipCompileData;
-    skipCompileData.writeUInt(packetType_skipBricksCompile,packetTypeBits);
-    skipCompileData.writeBit(false); //This is not a clear all bricks packet
+    skipCompileData.writeUInt(packetType_serverCommand,packetTypeBits);
+    skipCompileData.writeString("skipBricksCompile");
     skipCompileData.writeUInt(common_lua->bricks.size(),24);
     common_lua->theServer->send(&skipCompileData,true);
 
-    int bricksToSend = common_lua->bricks.size();
-    int bricksSentSoFar = 0;
-    while(bricksToSend > 0)
+    std::vector<packet*> resultPackets;
+    addBrickPacketsFromVector(loadedBricks,resultPackets);
+    for(int a = 0; a<resultPackets.size(); a++)
     {
-        int sentThisTime = 0;
-        int bitsLeft = packetMTUbits - (packetTypeBits + 8);
-        while(bitsLeft > 0 && (sentThisTime < bricksToSend))
-        {
-            brick *tmp = common_lua->bricks[sentThisTime + bricksSentSoFar];
-            bitsLeft -= tmp->getPacketBits();
-            sentThisTime++;
-        }
-
-        packet data;
-        data.writeUInt(packetType_addBricks,packetTypeBits);
-        data.writeUInt(sentThisTime,8);
-        for(int a = bricksSentSoFar; a<bricksSentSoFar+sentThisTime; a++)
-            common_lua->bricks[a]->addToPacket(&data);
-
-        //std::cout<<"In packet: "<<sentThisTime<<" "<<data.getStreamPos()<<"\n";
-        common_lua->theServer->send(&data,true);
-
-        bricksToSend -= sentThisTime;
-        bricksSentSoFar += sentThisTime;
+        common_lua->theServer->send(resultPackets[a],true);
+        delete resultPackets[a];
     }
 
     return 0;
@@ -659,38 +664,21 @@ static int loadBlocklandSave(lua_State *L)
         return 0;
     }
 
-    common_lua->loadBlocklandSave(fileName);
+    std::vector<brick*> loadedBricks;
+    common_lua->loadBlocklandSave(fileName,loadedBricks);
 
     packet skipCompileData;
-    skipCompileData.writeUInt(packetType_skipBricksCompile,packetTypeBits);
-    skipCompileData.writeBit(false); //This is not a clear all bricks packet
+    skipCompileData.writeUInt(packetType_serverCommand,packetTypeBits);
+    skipCompileData.writeString("skipBricksCompile");
     skipCompileData.writeUInt(common_lua->bricks.size(),24);
     common_lua->theServer->send(&skipCompileData,true);
 
-    int bricksToSend = common_lua->bricks.size();
-    int bricksSentSoFar = 0;
-    while(bricksToSend > 0)
+    std::vector<packet*> resultPackets;
+    addBrickPacketsFromVector(loadedBricks,resultPackets);
+    for(int a = 0; a<resultPackets.size(); a++)
     {
-        int sentThisTime = 0;
-        int bitsLeft = packetMTUbits - (packetTypeBits + 8);
-        while(bitsLeft > 0 && (sentThisTime < bricksToSend))
-        {
-            brick *tmp = common_lua->bricks[sentThisTime + bricksSentSoFar];
-            bitsLeft -= tmp->getPacketBits();
-            sentThisTime++;
-        }
-
-        packet data;
-        data.writeUInt(packetType_addBricks,packetTypeBits);
-        data.writeUInt(sentThisTime,8);
-        for(int a = bricksSentSoFar; a<bricksSentSoFar+sentThisTime; a++)
-            common_lua->bricks[a]->addToPacket(&data);
-
-        //std::cout<<"In packet: "<<sentThisTime<<" "<<data.getStreamPos()<<"\n";
-        common_lua->theServer->send(&data,true);
-
-        bricksToSend -= sentThisTime;
-        bricksSentSoFar += sentThisTime;
+        common_lua->theServer->send(resultPackets[a],true);
+        delete resultPackets[a];
     }
 
     return 0;
@@ -713,8 +701,8 @@ static int setWaterLevel(lua_State *L)
     common_lua->waterLevel = level;
 
     packet waterLevel;
-    waterLevel.writeUInt(packetType_waterOrDecal,packetTypeBits);
-    waterLevel.writeBit(true); //water, not decals
+    waterLevel.writeUInt(packetType_serverCommand,packetTypeBits);
+    waterLevel.writeString("setWaterLevel");
     waterLevel.writeFloat(level);
     common_lua->theServer->send(&waterLevel,true);
 }

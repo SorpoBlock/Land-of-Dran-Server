@@ -32,7 +32,7 @@ extern "C" {
     #include <lauxlib.h>
 }
 
-#define hardCodedNetworkVersion 10010
+#define hardCodedNetworkVersion 10011
 
 struct clientData
 {
@@ -210,11 +210,11 @@ struct unifiedWorld
     void addMusicType(std::string scriptName,std::string filePath);
     void addSoundType(std::string scriptName,std::string filePath);
     void playSound(std::string scriptName,float x,float y,float z,bool loop,int loopId = -1);
-    void playSoundExcept(std::string scriptName,float x,float y,float z,clientData *except);
+    void playSoundExcept(std::string scriptName,float x,float y,float z,clientData *except,float pitch = 1.0);
     void playSound(int soundId,float x,float y,float z,bool loop,int loopId = -1,float pitch = 1.0);
     void loopSound(int songId,brickCar *mount,int loopId,float pitch = 1.0);
     void loopSound(std::string scriptName,brickCar *mount,int loopId);
-    void playSound(std::string scriptName);
+    void playSound(std::string scriptName,float pitch = 1.0);
 
     std::vector<std::string> decalFilePaths;
     void loadDecals(std::string searchFolder);
@@ -227,6 +227,7 @@ struct unifiedWorld
     std::vector<item*> items;
     std::vector<clientData*> users;
     std::vector<dynamic*> dynamics;
+    std::vector<brick*> bricksAddedThisFrame;
     std::vector<brick*> bricks;
     std::vector<brickNameVector> namedBricks;
     //Octree<brick*> *tree = 0;
@@ -250,8 +251,8 @@ struct unifiedWorld
     void removeBrick(brick *theBrick);
     void setBrickName(brick *theBrick,std::string name);
     bool addBrick(brick *theBrick,bool stopOverlaps = false,bool colliding = true,bool networking = true);
-    void loadBlocklandSave(std::string filePath);
-    void loadLodSave(std::string filePath);
+    void loadBlocklandSave(std::string filePath,std::vector<brick*> &loadedBricks);
+    void loadLodSave(std::string filePath,std::vector<brick*> &loadedBricks);
 
     void dropItem(dynamic *holder,int slot,bool tryUpdateInventory = true);
     void pickUpItem(dynamic *holder,item *i,int slot,clientData *source=0);

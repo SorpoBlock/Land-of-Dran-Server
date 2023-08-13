@@ -1,5 +1,40 @@
 #include "brick.h"
 
+//Be sure to deallocate packets afterwards:
+void addBrickPacketsFromVector(std::vector<brick*> toAdd,std::vector<packet*> &result)
+{
+    int bricksToSend = toAdd.size();
+    int bricksSentSoFar = 0;
+    while(bricksToSend > 0)
+    {
+        int sentThisTime = 0;
+        int bitsLeft = packetMTUbits - (packetTypeBits + 8);
+        while(bitsLeft > 0 && (sentThisTime < bricksToSend))
+        {
+            brick *tmp = toAdd[sentThisTime + bricksSentSoFar];
+            bitsLeft -= tmp->getPacketBits();
+            sentThisTime++;
+        }
+
+        packet *data = new packet;
+        data->writeUInt(packetType_addBricks,packetTypeBits);
+        data->writeUInt(sentThisTime,8);
+        for(int a = bricksSentSoFar; a<bricksSentSoFar+sentThisTime; a++)
+            toAdd[a]->addToPacket(data);
+
+        result.push_back(data);
+
+        bricksToSend -= sentThisTime;
+        bricksSentSoFar += sentThisTime;
+    }
+}
+
+//Be sure to deallocate packets afterwards:
+void removeBrickPacketsFromVector(std::vector<brick*> toRemove,std::vector<packet*> &result)
+{
+
+}
+
 void brick::calcGridFromCarPos(btVector3 carOrigin)
 {
 
