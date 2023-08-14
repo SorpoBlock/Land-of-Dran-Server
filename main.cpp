@@ -433,6 +433,19 @@ int main(int argc, char *argv[])
     common.addMusicType("Analog","assets/sound/analog.wav");
     common.addMusicType("Drums","assets/sound/drums.wav");
 
+    common.addSoundType("C5Bass","assets/sound/BassC5.wav");
+    common.addSoundType("C5Brass","assets/sound/BrassC5.wav");
+    common.addSoundType("C5Flute","assets/sound/FluteC5.wav");
+    common.addSoundType("C5Guitar","assets/sound/GuitarC5.wav");
+    common.addSoundType("C5Piano","assets/sound/PianoC5.wav");
+    common.addSoundType("C5Saw","assets/sound/SawC5.wav");
+    common.addSoundType("C5Square","assets/sound/SquareC5.wav");
+    common.addSoundType("C5SteelDrum","assets/sound/SteelDrumC5.wav");
+    common.addSoundType("C5String","assets/sound/StringC5.wav");
+    common.addSoundType("C5Synth","assets/sound/SynthC5.wav");
+    common.addSoundType("C5Timpani","assets/sound/TimpaniC5.wav");
+    common.addSoundType("C5Vibraphone","assets/sound/VibraphoneC5.wav");
+
     preferenceFile addonsList;
     addonsList.importFromFile("add-ons/add-onsList.txt");
 

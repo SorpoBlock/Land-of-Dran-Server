@@ -771,6 +771,54 @@ static int getOwnerID(lua_State *L)
     return 1;
 }
 
+static int setPrint(lua_State *L)
+{
+    scope("setPrint");
+
+    unsigned char printMask = 0b00111111;
+
+    int args = lua_gettop(L);
+    if(args == 3)
+    {
+        printMask = lua_tointeger(L,-1);
+        lua_pop(L,1);
+    }
+
+    const char *printName = lua_tostring(L,-1);
+    lua_pop(L,1);
+
+    if(!printName)
+    {
+        error("Invalid string!");
+        return 0;
+    }
+
+    brick *toEdit = popBrick(L);
+
+    toEdit->printName = printName;
+    toEdit->printID = -1;
+    if(toEdit->printName.length() > 0)
+    {
+        for(unsigned int a = 0; a<common_lua->brickTypes->printNames.size(); a++)
+            if(common_lua->brickTypes->printNames[a] == printName)
+                toEdit->printID = a;
+    }
+
+    if(toEdit->printID == -1)
+    {
+        toEdit->printName = "";
+        toEdit->printMask = 0;
+    }
+    else
+        toEdit->printMask = printMask;
+
+    packet data;
+    toEdit->createUpdatePacket(&data);
+    common_lua->theServer->send(&data,true);
+
+    return 0;
+}
+
 void registerBrickFunctions(lua_State *L)
 {
     //Register metatable for dynamic
@@ -790,6 +838,7 @@ void registerBrickFunctions(lua_State *L)
         {"setPosition",setBrickPosition},
         {"setAngleID",setBrickAngleID},
         {"getOwnerID",getOwnerID},
+        {"setPrint",setPrint},
         {NULL,NULL}};
     luaL_newmetatable(L,"brickMETATABLE");
     luaL_setfuncs(L,dynamicRegs,0);
