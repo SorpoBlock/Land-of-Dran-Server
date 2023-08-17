@@ -127,7 +127,7 @@ void sendInitialDataSecondHalf(unifiedWorld *common,clientData *source,serverCli
             data.writeUInt(((brickCar*)musicBrick->car)->serverID,10);
             client->send(&data,true);
         }
-        else
+        else //music loop on brick
         {
             packet data;
             data.writeUInt(packetType_playSound,packetTypeBits);

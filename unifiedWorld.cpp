@@ -394,7 +394,7 @@ void unifiedWorld::messageAll(std::string text,std::string category)
     theServer->send(&data,true);
 }
 
-void unifiedWorld::playSound(std::string scriptName,float pitch)
+void unifiedWorld::playSound(std::string scriptName,float pitch,float vol)
 {
     int idx = -1;
     for(unsigned int a = 0; a<soundScriptNames.size(); a++)
@@ -417,7 +417,35 @@ void unifiedWorld::playSound(std::string scriptName,float pitch)
     data.writeBit(false);
     data.writeBit(true);
     data.writeFloat(pitch);
+    data.writeFloat(vol);
     theServer->send(&data,true);
+}
+
+void unifiedWorld::playSound(std::string scriptName,float pitch,float vol,clientData *target)
+{
+    int idx = -1;
+    for(unsigned int a = 0; a<soundScriptNames.size(); a++)
+    {
+        if(soundScriptNames[a] == scriptName)
+        {
+            idx = a;
+            break;
+        }
+    }
+    if(idx == -1)
+    {
+        error("Could not find sound " + scriptName);
+        return;
+    }
+
+    packet data;
+    data.writeUInt(packetType_playSound,packetTypeBits);
+    data.writeUInt(idx,10);
+    data.writeBit(false);
+    data.writeBit(true);
+    data.writeFloat(pitch);
+    data.writeFloat(vol);
+    target->netRef->send(&data,true);
 }
 
 void unifiedWorld::setBrickColor(brick *theBrick,float r,float g,float b,float a)
@@ -466,7 +494,7 @@ void unifiedWorld::setBrickAngleID(brick *theBrick,int angleID)
     theServer->send(&data,true);
 }
 
-void unifiedWorld::playSound(int soundId,float x,float y,float z,bool loop,int loopId,float pitch)
+void unifiedWorld::playSound(int soundId,float x,float y,float z,bool loop,int loopId,float pitch,float vol)
 {
     packet data;
     data.writeUInt(packetType_playSound,packetTypeBits);
@@ -498,6 +526,7 @@ void unifiedWorld::playSound(int soundId,float x,float y,float z,bool loop,int l
     data.writeFloat(y);
     data.writeFloat(z);
     data.writeFloat(pitch);
+    data.writeFloat(vol);
     theServer->send(&data,true);
 }
 
@@ -538,7 +567,7 @@ void unifiedWorld::removeItem(item *toRemove)
     removeDynamic(toRemove);
 }
 
-void unifiedWorld::playSound(std::string scriptName,float x,float y,float z,bool loop,int loopId)
+void unifiedWorld::playSound(std::string scriptName,float x,float y,float z,bool loop,int loopId,float pitch,float vol)
 {
     int idx = -1;
     for(unsigned int a = 0; a<soundScriptNames.size(); a++)
@@ -555,10 +584,10 @@ void unifiedWorld::playSound(std::string scriptName,float x,float y,float z,bool
         return;
     }
 
-    playSound(idx,x,y,z,loop,loopId);
+    playSound(idx,x,y,z,loop,loopId,pitch,vol);
 }
 
-void unifiedWorld::playSoundExcept(std::string scriptName,float x,float y,float z,clientData *except,float pitch)
+void unifiedWorld::playSoundExcept(std::string scriptName,float x,float y,float z,clientData *except,float pitch,float vol)
 {
     int idx = -1;
     for(unsigned int a = 0; a<soundScriptNames.size(); a++)
@@ -585,6 +614,7 @@ void unifiedWorld::playSoundExcept(std::string scriptName,float x,float y,float 
     data.writeFloat(y);
     data.writeFloat(z);
     data.writeFloat(pitch);
+    data.writeFloat(vol);
     for(int a = 0; a<users.size(); a++)
         if(users[a] != except)
             users[a]->netRef->send(&data,true);

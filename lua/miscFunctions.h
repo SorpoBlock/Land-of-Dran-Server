@@ -86,10 +86,22 @@ static int playSound(lua_State *L)
     scope("playSound");
 
     int args = lua_gettop(L);
-    if(args == 1 || args == 2)
+    if(args == 1 || args == 2 || args == 3)
     {
+        float vol = 1.0;
+        if(args == 3)
+        {
+            vol = lua_tonumber(L,-1);
+            if(vol < 0.0)
+                vol = 0.0;
+            if(vol > 1.0)
+                vol = 1.0;
+
+            lua_pop(L,1);
+        }
+
         float pitch = 1.0;
-        if(args == 2)
+        if(args == 2 || args == 3)
         {
             pitch = lua_tonumber(L,-1);
             if(pitch < 0)
@@ -109,17 +121,28 @@ static int playSound(lua_State *L)
         }
 
         std::string s = std::string(sound);
-        common_lua->playSound(s,pitch);
+        common_lua->playSound(s,pitch,vol);
 
         return 0;
     }
-    else if(args == 5 || args == 6)
+    else if(args == 5 || args == 6 || args == 7)
     {
         bool loop = lua_toboolean(L,-1);
         lua_pop(L,1);
 
+        float vol = 1.0;
+        if(args == 7)
+        {
+            vol = lua_tonumber(L,-1);
+            if(vol < 0.0)
+                vol = 0.0;
+            if(vol > 1.0)
+                vol = 1.0;
+            lua_pop(L,1);
+        }
+
         float pitch = 1.0;
-        if(args == 6)
+        if(args == 6 || args == 7)
         {
             pitch = lua_tonumber(L,-1);
             if(pitch < 0)
@@ -146,14 +169,77 @@ static int playSound(lua_State *L)
         }
 
         std::string s = std::string(sound);
-        common_lua->playSound(s,x,y,z,loop,pitch);
+        common_lua->playSound(s,x,y,z,false,-1,pitch,vol);
 
         return 0;
     }
     else
     {
         lua_pop(L,args);
-        error(std::to_string(args) + " args passed to playSound (lua) but it takes 1 or 5 arguments");
+        error(std::to_string(args) + " args passed to playSound (lua) which is bad");
+        return 0;
+    }
+}
+
+
+
+static int playSoundClient(lua_State *L)
+{
+    scope("playSoundClient");
+
+    int args = lua_gettop(L);
+    if(args == 2 || args == 3 || args == 4)
+    {
+        float vol = 1.0;
+        if(args == 4)
+        {
+            vol = lua_tonumber(L,-1);
+            if(vol < 0.0)
+                vol = 0.0;
+            if(vol > 1.0)
+                vol = 1.0;
+
+            lua_pop(L,1);
+        }
+
+        float pitch = 1.0;
+        if(args == 3 || args == 4)
+        {
+            pitch = lua_tonumber(L,-1);
+            if(pitch < 0)
+                pitch = 0;
+            if(pitch > 10.0)
+                pitch = 10.0;
+            lua_pop(L,1);
+        }
+
+        const char *sound = lua_tostring(L,-1);
+        lua_pop(L,1);
+
+        if(!sound)
+        {
+            error("Invalid argument for sound name!");
+            return 0;
+        }
+
+        std::string s = std::string(sound);
+
+        clientData *target = popClient(L);
+
+        if(!target)
+        {
+            error("Invalid client!");
+            return 0;
+        }
+
+        common_lua->playSound(s,pitch,vol,target);
+
+        return 0;
+    }
+    else
+    {
+        lua_pop(L,args);
+        error(std::to_string(args) + " args passed to playSoundClient(lua) which is bad, needs 2 to 4 args");
         return 0;
     }
 }
@@ -713,6 +799,7 @@ void bindMiscFuncs(lua_State *L)
     lua_register(L,"relWalkSpeed",relWalkSpeed);
     //lua_register(L,"saveBuildLod",saveBuildLod);
     lua_register(L,"playSound",playSound);
+    lua_register(L,"playSoundClient",playSoundClient);
     lua_register(L,"clearAllCars",clearAllCars);
     lua_register(L,"bottomPrintAll",bottomPrintAll);
     lua_register(L,"printNetIDs",printNetIDs);

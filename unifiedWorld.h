@@ -32,7 +32,7 @@ extern "C" {
     #include <lauxlib.h>
 }
 
-#define hardCodedNetworkVersion 10011
+#define hardCodedNetworkVersion 10012
 
 struct clientData
 {
@@ -209,12 +209,13 @@ struct unifiedWorld
     std::vector<bool> soundIsMusic;
     void addMusicType(std::string scriptName,std::string filePath);
     void addSoundType(std::string scriptName,std::string filePath);
-    void playSound(std::string scriptName,float x,float y,float z,bool loop,int loopId = -1);
-    void playSoundExcept(std::string scriptName,float x,float y,float z,clientData *except,float pitch = 1.0);
-    void playSound(int soundId,float x,float y,float z,bool loop,int loopId = -1,float pitch = 1.0);
+    void playSound(std::string scriptName,float x,float y,float z,bool loop,int loopId = -1,float pitch = 1.0,float vol = 1.0);
+    void playSoundExcept(std::string scriptName,float x,float y,float z,clientData *except,float pitch = 1.0,float vol = 1.0);
+    void playSound(int soundId,float x,float y,float z,bool loop,int loopId = -1,float pitch = 1.0,float vol = 1.0);
     void loopSound(int songId,brickCar *mount,int loopId,float pitch = 1.0);
     void loopSound(std::string scriptName,brickCar *mount,int loopId);
-    void playSound(std::string scriptName,float pitch = 1.0);
+    void playSound(std::string scriptName,float pitch = 1.0,float vol = 1.0);
+    void playSound(std::string scriptName,float pitch,float vol,clientData *target);
 
     std::vector<std::string> decalFilePaths;
     void loadDecals(std::string searchFolder);

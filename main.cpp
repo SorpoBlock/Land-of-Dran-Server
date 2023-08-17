@@ -446,6 +446,15 @@ int main(int argc, char *argv[])
     common.addSoundType("C5Timpani","assets/sound/TimpaniC5.wav");
     common.addSoundType("C5Vibraphone","assets/sound/VibraphoneC5.wav");
 
+    common.addSoundType("DrumsetClap","assets/sound/Drumset/DrumsetClap.wav");
+    common.addSoundType("DrumsetCymbal","assets/sound/Drumset/DrumsetCymbal.wav");
+    common.addSoundType("DrumsetDrumSnare","assets/sound/Drumset/DrumsetDrumSnare.wav");
+    common.addSoundType("DrumsetESnare","assets/sound/Drumset/DrumsetESnare.wav");
+    common.addSoundType("DrumsetKick","assets/sound/Drumset/DrumsetKick.wav");
+    common.addSoundType("DrumsetPedalC","assets/sound/Drumset/DrumsetPedalC.wav");
+    common.addSoundType("DrumsetPowerSnare","assets/sound/Drumset/DrumsetPowerSnare.wav");
+    common.addSoundType("DrumsetTom","assets/sound/Drumset/DrumsetTom.wav");
+
     preferenceFile addonsList;
     addonsList.importFromFile("add-ons/add-onsList.txt");
 
