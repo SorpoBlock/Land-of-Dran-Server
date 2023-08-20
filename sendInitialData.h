@@ -109,7 +109,47 @@ void sendInitialDataSecondHalf(unifiedWorld *common,clientData *source,serverCli
         client->send(&data,true);
     }
 
-    for(unsigned int a = 0; a<maxMusicBricks; a++)
+    for(unsigned int a = 0; a<common->carMusicLoops.size(); a++)
+    {
+        int loopID = std::get<0>(common->carMusicLoops[a]);
+        int soundID = std::get<1>(common->carMusicLoops[a]);
+        int carID = std::get<2>(common->carMusicLoops[a]);
+        float pitch = std::get<3>(common->carMusicLoops[a]);
+
+        packet data;
+        data.writeUInt(packetType_playSound,packetTypeBits);
+        data.writeUInt(soundID,10);
+        data.writeBit(true);
+        data.writeUInt(loopID,24);
+        data.writeFloat(pitch);
+        data.writeBit(true);
+        data.writeUInt(carID,10);
+        client->send(&data,true);
+    }
+
+    for(unsigned int a = 0; a<common->worldMusicLoops.size(); a++)
+    {
+        int loopID = std::get<0>(common->worldMusicLoops[a]);
+        int soundID = std::get<1>(common->worldMusicLoops[a]);
+        float x = std::get<2>(common->worldMusicLoops[a]);
+        float y = std::get<3>(common->worldMusicLoops[a]);
+        float z = std::get<4>(common->worldMusicLoops[a]);
+        float pitch = std::get<5>(common->worldMusicLoops[a]);
+
+        packet data;
+        data.writeUInt(packetType_playSound,packetTypeBits);
+        data.writeUInt(soundID,10);
+        data.writeBit(true);
+        data.writeUInt(loopID,24);
+        data.writeFloat(pitch);
+        data.writeBit(false);
+        data.writeFloat(x);
+        data.writeFloat(y);
+        data.writeFloat(z);
+        client->send(&data,true);
+    }
+
+    /*for(unsigned int a = 0; a<maxMusicBricks; a++)
     {
         brick *musicBrick = common->musicBricks[a];
         if(!musicBrick)
@@ -141,7 +181,7 @@ void sendInitialDataSecondHalf(unifiedWorld *common,clientData *source,serverCli
             data.writeFloat(musicBrick->getZ());
             client->send(&data,true);
         }
-    }
+    }*/
 
     for(unsigned int a = 0; a<common->dynamics.size(); a++)
     {

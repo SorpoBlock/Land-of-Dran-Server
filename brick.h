@@ -148,6 +148,7 @@ struct brick
     //TODO: Remove this and send print ID
     std::string printName = "";
 
+    int musicLoopId = -1;
     int music = 0;
     float musicPitch = 1.0;
 

@@ -494,32 +494,12 @@ void unifiedWorld::setBrickAngleID(brick *theBrick,int angleID)
     theServer->send(&data,true);
 }
 
-void unifiedWorld::playSound(int soundId,float x,float y,float z,bool loop,int loopId,float pitch,float vol)
+void unifiedWorld::playSound(int soundId,float x,float y,float z,float pitch,float vol)
 {
     packet data;
     data.writeUInt(packetType_playSound,packetTypeBits);
     data.writeUInt(soundId,10);
-    data.writeBit(loop);
-
-    if(loop)
-    {
-        if(loopId >= 31)
-        {
-            error("Too many music bricks!");
-            return;
-        }
-
-        data.writeUInt(loopId,5);
-        data.writeFloat(pitch);
-        data.writeBit(false);
-        data.writeFloat(x);
-        data.writeFloat(y);
-        data.writeFloat(z);
-        theServer->send(&data,true);
-
-        return;
-    }
-
+    data.writeBit(false);
     data.writeBit(false);
     data.writeBit(false);
     data.writeFloat(x);
@@ -567,7 +547,7 @@ void unifiedWorld::removeItem(item *toRemove)
     removeDynamic(toRemove);
 }
 
-void unifiedWorld::playSound(std::string scriptName,float x,float y,float z,bool loop,int loopId,float pitch,float vol)
+void unifiedWorld::playSound(std::string scriptName,float x,float y,float z,float pitch,float vol)
 {
     int idx = -1;
     for(unsigned int a = 0; a<soundScriptNames.size(); a++)
@@ -584,7 +564,7 @@ void unifiedWorld::playSound(std::string scriptName,float x,float y,float z,bool
         return;
     }
 
-    playSound(idx,x,y,z,loop,loopId,pitch,vol);
+    playSound(idx,x,y,z,pitch,vol);
 }
 
 void unifiedWorld::playSoundExcept(std::string scriptName,float x,float y,float z,clientData *except,float pitch,float vol)
@@ -620,7 +600,85 @@ void unifiedWorld::playSoundExcept(std::string scriptName,float x,float y,float 
             users[a]->netRef->send(&data,true);
 }
 
-void unifiedWorld::setMusic(brick *theBrick,int music)
+int unifiedWorld::startSoundLoop(int soundID,brickCar *mount,float pitch)
+{
+    if(!mount)
+        return -1;
+    if(soundID < 0 || soundID >= soundIsMusic.size())
+        return -1;
+
+    packet data;
+    data.writeUInt(packetType_playSound,packetTypeBits);
+    data.writeUInt(soundID,10);
+    data.writeBit(true);
+    data.writeUInt(currentMusicLoopID,24);
+    data.writeFloat(pitch);
+    data.writeBit(true);
+    data.writeUInt(mount->serverID,10);
+    theServer->send(&data,true);
+
+    carMusicLoops.push_back({currentMusicLoopID,soundID,mount->serverID,pitch});
+
+    currentMusicLoopID++;
+    return currentMusicLoopID-1;
+}
+
+int unifiedWorld::startSoundLoop(int soundID,float x,float y,float z,float pitch)
+{
+    if(soundID < 0 || soundID >= soundIsMusic.size())
+        return -1;
+
+    packet data;
+    data.writeUInt(packetType_playSound,packetTypeBits);
+    data.writeUInt(soundID,10);
+    data.writeBit(true);
+    data.writeUInt(currentMusicLoopID,24);
+    data.writeFloat(pitch);
+    data.writeBit(false);
+    data.writeFloat(x);
+    data.writeFloat(y);
+    data.writeFloat(z);
+    theServer->send(&data,true);
+
+    worldMusicLoops.push_back({currentMusicLoopID,soundID,x,y,z,pitch});
+
+    currentMusicLoopID++;
+    return currentMusicLoopID-1;
+}
+
+void unifiedWorld::stopSoundLoop(int loopID)
+{
+    packet data;
+    data.writeUInt(packetType_serverCommand,packetTypeBits);
+    data.writeString("stopLoop");
+    data.writeUInt(loopID,24);
+    theServer->send(&data,true);
+
+    for(int a = 0; a<worldMusicLoops.size(); a++)
+    {
+        int id = std::get<0>(worldMusicLoops[a]);
+        std::cout<<" \t "<<id<<" == "<<loopID<<"\n";
+        if(id == loopID)
+        {
+            std::cout<<"Erasing world loop idx "<<a<<" id "<<loopID<<"\n";
+            worldMusicLoops.erase(worldMusicLoops.begin() + a);
+            return;
+        }
+    }
+
+    for(int a = 0; a<carMusicLoops.size(); a++)
+    {
+        int id = std::get<0>(carMusicLoops[a]);
+        if(id == loopID)
+        {
+            std::cout<<"Erasing car loop idx "<<a<<" id "<<loopID<<"\n";
+            carMusicLoops.erase(carMusicLoops.begin() + a);
+            return;
+        }
+    }
+}
+
+/*void unifiedWorld::setMusic(brick *theBrick,int music)
 {
     if(music <= 0)
     {
@@ -707,7 +765,7 @@ void unifiedWorld::loopSound(std::string scriptName,brickCar *mount,int loopId)
     }
 
     loopSound(idx,mount,loopId);
-}
+}*/
 
 void unifiedWorld::addSoundType(std::string scriptName,std::string filePath)
 {
@@ -879,13 +937,18 @@ void unifiedWorld::removeBrickCar(brickCar *toRemove)
     if(!toRemove)
         return;
 
-    for(unsigned int a = 0; a<maxMusicBricks; a++)
+    /*for(unsigned int a = 0; a<maxMusicBricks; a++)
     {
         if(toRemove->bricks[0] == musicBricks[a])
         {
             setMusic(toRemove->bricks[0],0);
             break;
         }
+    }*/
+    if(toRemove->musicLoopId != -1)
+    {
+        stopSoundLoop(toRemove->musicLoopId);
+        toRemove->musicLoopId = -1;
     }
 
     /*for(int a = 0; a<toRemove->bricks.size(); a++)
@@ -1605,8 +1668,13 @@ void unifiedWorld::clearBricks(clientData *source)
 
             data.writeUInt(theBrick->serverID,20);
 
-            if(theBrick->music > 0)
-                setMusic(theBrick,0);
+            //if(theBrick->music > 0)
+              //  setMusic(theBrick,0);
+            if(theBrick->musicLoopId != -1)
+            {
+                stopSoundLoop(theBrick->musicLoopId);
+                theBrick->musicLoopId = -1;
+            }
 
             if(theBrick->body)
             {
@@ -1713,8 +1781,13 @@ void unifiedWorld::removeBrick(brick *theBrick)
 
     setBrickName(theBrick,"");
 
-    if(theBrick->music > 0)
-        setMusic(theBrick,0);
+    if(theBrick->musicLoopId != -1)
+    {
+        stopSoundLoop(theBrick->musicLoopId);
+        theBrick->musicLoopId = -1;
+    }
+    /*if(theBrick->music > 0)
+        setMusic(theBrick,0);*/
 
     if(theBrick->body)
     {
@@ -1763,7 +1836,7 @@ void unifiedWorld::removeBrick(brick *theBrick)
 
     overlapTree->Remove(insertMin,insertMax,theBrick);
 
-    playSound("BrickBreak",theBrick->getX(),theBrick->getY(),theBrick->getZ(),false);
+    playSound("BrickBreak",theBrick->getX(),theBrick->getY(),theBrick->getZ());
 
     packet data;
     data.writeUInt(packetType_removeBrick,packetTypeBits);

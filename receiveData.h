@@ -731,11 +731,29 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                     common->removeLight(source->lastWrenchedBrick->attachedLight);
             }
 
-            common->setMusic(source->lastWrenchedBrick,music);
+            //common->setMusic(source->lastWrenchedBrick,music);
 
             if(!source->lastWrenchedBrick->car)
             {
                 common->setBrickName(source->lastWrenchedBrick,name);
+
+                source->lastWrenchedBrick->music = music;
+                //Music is playing and we want it to stop
+                if(source->lastWrenchedBrick->music == 0 && source->lastWrenchedBrick->musicLoopId != -1)
+                {
+                    common->stopSoundLoop(source->lastWrenchedBrick->musicLoopId);
+                    source->lastWrenchedBrick->musicLoopId = -1;
+                }
+                //Music is playing and we want to change it
+                else if(source->lastWrenchedBrick->music != 0 && source->lastWrenchedBrick->musicLoopId != -1)
+                {
+                    common->stopSoundLoop(source->lastWrenchedBrick->musicLoopId);
+                    source->lastWrenchedBrick->musicLoopId = common->startSoundLoop(music,source->lastWrenchedBrick->getX(),source->lastWrenchedBrick->getY(),source->lastWrenchedBrick->getZ(),source->lastWrenchedBrick->musicPitch);
+                }
+                //Nothing is playing and we want to start
+                else if(source->lastWrenchedBrick->music != 0 && source->lastWrenchedBrick->musicLoopId == -1)
+                    source->lastWrenchedBrick->musicLoopId = common->startSoundLoop(music,source->lastWrenchedBrick->getX(),source->lastWrenchedBrick->getY(),source->lastWrenchedBrick->getZ(),source->lastWrenchedBrick->musicPitch);
+
 
                 /*if(source->lastWrenchedBrick->body && !colliding)
                 {
@@ -764,6 +782,28 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                     common->theServer->send(&update,true);
                 }
             }
+            else
+            {
+                brickCar *theCar = (brickCar*)source->lastWrenchedBrick->car;
+                theCar->music = music;
+                theCar->musicPitch = pitch;
+                //Music is playing and we want it to stop
+                if(theCar->music == 0 && theCar->musicLoopId != -1)
+                {
+                    common->stopSoundLoop(theCar->musicLoopId);
+                    theCar->musicLoopId = -1;
+                }
+                //Music is playing and we want to change it
+                else if(theCar->music != 0 && theCar->musicLoopId != -1)
+                {
+                    common->stopSoundLoop(theCar->musicLoopId);
+                    theCar->musicLoopId = common->startSoundLoop(music,theCar,theCar->musicPitch);
+                }
+                //Nothing is playing and we want to start
+                else if(theCar->music != 0 && theCar->musicLoopId == -1)
+                    theCar->musicLoopId = common->startSoundLoop(music,theCar,theCar->musicPitch);
+
+            }
 
             source->lastWrenchedBrick = 0;
 
@@ -788,19 +828,8 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                 return;
 
             btVector3 pos = source->controlling->getWorldTransform().getOrigin();
-            common->playSound("ToolSwitch",pos.x(),pos.y(),pos.z(),false);
+            common->playSound("ToolSwitch",pos.x(),pos.y(),pos.z());
             common->dropItem(source->controlling,invSlot);
-
-            /*for(unsigned int a = 0; a<common->items.size(); a++)
-            {
-                if(common->items[a]->heldBy == source->controlling)
-                {
-                    common->dropItem(common->items[a]);
-                    btVector3 pos = source->controlling->getWorldTransform().getOrigin();
-                    common->playSound("ToolSwitch",pos.x(),pos.y(),pos.z(),false);
-                    return;
-                }
-            }*/
             return;
         }
         case clicked:
@@ -909,7 +938,7 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                     return;
 
                 common->pickUpItem(source->controlling,i,freeSlot,source);
-                common->playSound("Beep",clickPos.x(),clickPos.y(),clickPos.z(),false);
+                common->playSound("Beep",clickPos.x(),clickPos.y(),clickPos.z());
 
                 return;
             }
@@ -938,7 +967,7 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
 
                     //source->cameraTarget = car->body;
                     source->sendCameraDetails();
-                    common->playSound("PlayerMount",raystart.x(),raystart.y(),raystart.z(),false);
+                    common->playSound("PlayerMount",raystart.x(),raystart.y(),raystart.z());
                     return;
                 }
                 else
@@ -1188,7 +1217,7 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
             {
                 common->bricksAddedThisFrame.push_back(theBrick);
                 source->ownedBricks.push_back(theBrick);
-                common->playSound("ClickPlant",theBrick->getX(),theBrick->getY(),theBrick->getZ(),false);
+                common->playSound("ClickPlant",theBrick->getX(),theBrick->getY(),theBrick->getZ());
                 source->undoList.push_back(theBrick->serverID);
                 clientPlantBrickEvent(source,theBrick);
             }
@@ -1399,7 +1428,7 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                 bool playJumpSound = source->controlling->control(yaw,controlMask & 1,controlMask & 2,controlMask & 4,controlMask & 8,controlMask &16,common->physicsWorld,!source->prohibitTurning,common->useRelativeWalkingSpeed);
 
                 if(playJumpSound)
-                    common->playSound("Jump",pos.x(),pos.y(),pos.z(),false);*/
+                    common->playSound("Jump",pos.x(),pos.y(),pos.z());*/
 
                 if(invSlot != -1)
                 {
@@ -1436,7 +1465,7 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                                             }
                                         }
                                     }
-                                    common->playSound("HammerHit",res.m_hitPointWorld.x(),res.m_hitPointWorld.y(),res.m_hitPointWorld.z(),false);
+                                    common->playSound("HammerHit",res.m_hitPointWorld.x(),res.m_hitPointWorld.y(),res.m_hitPointWorld.z());
                                 }
                             }
                         }
@@ -1463,7 +1492,7 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                                         brick *theBrick = (brick*)body->getUserPointer();
                                         if((unsigned)theBrick->builtBy == source->accountID || source->hasLuaAccess || theBrick->builtBy == 0)
                                         {
-                                            common->playSound("WrenchHit",rayend.x(),rayend.y(),rayend.z(),false);
+                                            common->playSound("WrenchHit",rayend.x(),rayend.y(),rayend.z());
                                             source->lastWrenchedBrick = theBrick;
 
                                             if(theBrick->isWheel)
@@ -1573,12 +1602,12 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                                         data.writeString(" ");
                                         client->send(&data,true);
 
-                                        common->playSound("WrenchHit",rayend.x(),rayend.y(),rayend.z(),false);
+                                        common->playSound("WrenchHit",rayend.x(),rayend.y(),rayend.z());
                                         return;
                                     }
                                 }
 
-                                common->playSound("WrenchMiss",rayend.x(),rayend.y(),rayend.z(),false);
+                                common->playSound("WrenchMiss",rayend.x(),rayend.y(),rayend.z());
                             }
                         }
                     }

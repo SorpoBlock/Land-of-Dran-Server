@@ -125,13 +125,10 @@ static int playSound(lua_State *L)
 
         return 0;
     }
-    else if(args == 5 || args == 6 || args == 7)
+    else if(args == 4 || args == 5 || args == 6)
     {
-        bool loop = lua_toboolean(L,-1);
-        lua_pop(L,1);
-
         float vol = 1.0;
-        if(args == 7)
+        if(args == 6)
         {
             vol = lua_tonumber(L,-1);
             if(vol < 0.0)
@@ -142,7 +139,7 @@ static int playSound(lua_State *L)
         }
 
         float pitch = 1.0;
-        if(args == 6 || args == 7)
+        if(args == 5 || args == 6)
         {
             pitch = lua_tonumber(L,-1);
             if(pitch < 0)
@@ -169,7 +166,7 @@ static int playSound(lua_State *L)
         }
 
         std::string s = std::string(sound);
-        common_lua->playSound(s,x,y,z,false,-1,pitch,vol);
+        common_lua->playSound(s,x,y,z,pitch,vol);
 
         return 0;
     }
@@ -429,8 +426,12 @@ static int clearAllBricks(lua_State *L)
             theBrick->attachedLight = 0;
         }
 
-        if(theBrick->music > 0)
-            common_lua->setMusic(theBrick,0);
+        if(theBrick->musicLoopId != -1)
+        {
+            common_lua->stopSoundLoop(theBrick->musicLoopId);
+            theBrick->musicLoopId = -1;
+        }
+        //common_lua->setMusic(theBrick,0);
 
         if(theBrick->body)
         {
@@ -793,6 +794,58 @@ static int setWaterLevel(lua_State *L)
     common_lua->theServer->send(&waterLevel,true);
 }
 
+static int setAudioEffect(lua_State *L)
+{
+    scope("setAudioEffect");
+
+    int args = lua_gettop(L);
+    if(args == 1)
+    {
+        const char *effectName = lua_tostring(L,-1);
+        lua_pop(L,1);
+
+        if(!effectName)
+        {
+            error("Invalid string argument!");
+            return 0;
+        }
+
+        packet commonAudioEffect;
+        commonAudioEffect.writeUInt(packetType_serverCommand,packetTypeBits);
+        commonAudioEffect.writeString("audioEffect");
+        commonAudioEffect.writeString(effectName);
+        common_lua->theServer->send(&commonAudioEffect,true);
+    }
+    else if(args == 2)
+    {
+        clientData *user = popClient(L);
+        if(!user)
+        {
+            error("Invalid client passed as parameter!");
+            return 0;
+        }
+
+        const char *effectName = lua_tostring(L,-1);
+        lua_pop(L,1);
+
+        if(!effectName)
+        {
+            error("Invalid string argument!");
+            return 0;
+        }
+
+        packet audioEffect;
+        audioEffect.writeUInt(packetType_serverCommand,packetTypeBits);
+        audioEffect.writeString("audioEffect");
+        audioEffect.writeString(effectName);
+        user->netRef->send(&audioEffect,true);
+    }
+    else
+        error("Function needs 1 or 2 args!");
+
+    return 0;
+}
+
 void bindMiscFuncs(lua_State *L)
 {
     lua_register(L,"echo",LUAecho);
@@ -810,6 +863,7 @@ void bindMiscFuncs(lua_State *L)
     lua_register(L,"saveBuild",saveBuild);
     lua_register(L,"setColorPalette",setColorPalette);
     lua_register(L,"setWaterLevel",setWaterLevel);
+    lua_register(L,"setAudioEffect",setAudioEffect);
 }
 
 #endif // MISCFUNCTIONS_H_INCLUDED

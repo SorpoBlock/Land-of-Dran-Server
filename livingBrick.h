@@ -53,6 +53,10 @@ struct steeringBrick : brick
 
 struct brickCar
 {
+    int musicLoopId = -1;
+    int music = 0;
+    float musicPitch = 1.0;
+
     bool doTireEmitter = false;
 
     std::vector<brick*> bricks;

@@ -779,8 +779,6 @@ int main(int argc, char *argv[])
             bool playJumpSound = player->control(yaw,player->lastControlMask & 1,player->lastControlMask & 2,player->lastControlMask & 4,player->lastControlMask & 8,player->lastControlMask &16,common.physicsWorld,!common.users[a]->prohibitTurning,common.useRelativeWalkingSpeed,common.users[a]->debugColors,common.users[a]->debugPositions);
 
             btVector3 pos = player->getWorldTransform().getOrigin();
-            //if(playJumpSound)
-                //common.playSound("Jump",pos.x(),pos.y(),pos.z(),false);
 
             if(fabs(pos.x()) > 10000 || fabs(pos.y()) > 10000 || fabs(pos.z()) > 10000 || isnan(pos.x()) || isnan(pos.y()) || isnan(pos.z()) || isinf(pos.x()) || isinf(pos.y()) || isinf(pos.z()))
             {
@@ -876,7 +874,7 @@ int main(int argc, char *argv[])
                         {
                             d->lastSplashEffect = SDL_GetTicks();
                             d->lastInWater = true;
-                            common.playSound("Splash",pos.x(),common.waterLevel,pos.z(),false);
+                            common.playSound("Splash",pos.x(),common.waterLevel,pos.z());
                             common.addEmitter(common.getEmitterType("playerBubbleEmitter"),pos.x(),common.waterLevel,pos.z());
                         }
                     }
@@ -1072,7 +1070,7 @@ int main(int argc, char *argv[])
                     btVector3 pos = obA->getWorldTransform().getOrigin();
                     obA->setUserIndex2(SDL_GetTicks());
                     obB->setUserIndex2(SDL_GetTicks());
-                    common.playSound("FastImpact",pos.x(),pos.y(),pos.z(),false);
+                    common.playSound("FastImpact",pos.x(),pos.y(),pos.z());
                 }
             }
             /*int active = 0;

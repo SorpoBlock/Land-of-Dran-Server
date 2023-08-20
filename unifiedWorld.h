@@ -23,7 +23,7 @@ typedef RTree<brick*,double,3> brickPointerTree;
 #define bodyUserIndex_plane 88
 //#define bodyUserIndex_dynamic 99
 
-#define maxMusicBricks 32
+//#define maxMusicBricks 32
 #define brickTreeSize 32768
 
 extern "C" {
@@ -209,11 +209,12 @@ struct unifiedWorld
     std::vector<bool> soundIsMusic;
     void addMusicType(std::string scriptName,std::string filePath);
     void addSoundType(std::string scriptName,std::string filePath);
-    void playSound(std::string scriptName,float x,float y,float z,bool loop,int loopId = -1,float pitch = 1.0,float vol = 1.0);
+
+    void playSound(std::string scriptName,float x,float y,float z,float pitch = 1.0,float vol = 1.0);
     void playSoundExcept(std::string scriptName,float x,float y,float z,clientData *except,float pitch = 1.0,float vol = 1.0);
-    void playSound(int soundId,float x,float y,float z,bool loop,int loopId = -1,float pitch = 1.0,float vol = 1.0);
-    void loopSound(int songId,brickCar *mount,int loopId,float pitch = 1.0);
-    void loopSound(std::string scriptName,brickCar *mount,int loopId);
+    void playSound(int soundId,float x,float y,float z,float pitch = 1.0,float vol = 1.0);
+    //void loopSound(int songId,brickCar *mount,int loopId,float pitch = 1.0);
+    //void loopSound(std::string scriptName,brickCar *mount,int loopId);
     void playSound(std::string scriptName,float pitch = 1.0,float vol = 1.0);
     void playSound(std::string scriptName,float pitch,float vol,clientData *target);
 
@@ -222,8 +223,18 @@ struct unifiedWorld
     void sendDecals(serverClientHandle *target);
 
     //std::vector<brick*> musicBricks;
-    brick *musicBricks[maxMusicBricks];
-    void setMusic(brick *theBrick,int music);
+    //brick *musicBricks[maxMusicBricks];
+    //void setMusic(brick *theBrick,int music);
+
+    //loopID,soundID,carID,pitch
+    std::vector<std::tuple<int,int,int,float>> carMusicLoops;
+    //loopID,soundID,worldPos,pitch
+    std::vector<std::tuple<int,int,float,float,float,float>> worldMusicLoops;
+    int currentMusicLoopID = 0;
+    //Returns loop ID:
+    int startSoundLoop(int soundID,float x,float y,float z,float pitch);
+    int startSoundLoop(int soundID,brickCar *mount,float pitch);
+    void stopSoundLoop(int loopID);
 
     std::vector<item*> items;
     std::vector<clientData*> users;
