@@ -1430,7 +1430,7 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                 if(playJumpSound)
                     common->playSound("Jump",pos.x(),pos.y(),pos.z());*/
 
-                if(invSlot != -1)
+                if(invSlot != -1 && ((SDL_GetTicks() - source->controlling->pickUpItemFireCooldownStart) > 250))
                 {
                     if(source->controlling->holding[invSlot] && leftMouseDown)
                     {

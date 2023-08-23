@@ -376,6 +376,7 @@ int main(int argc, char *argv[])
     hammerItem->handOffsetX = 1.8;
     hammerItem->handOffsetY = 3.5;
     hammerItem->handOffsetZ = -2.0;
+    hammerItem->iconPath = "assets/tools/icons/hammerIcon.png";
     common.itemTypes.push_back(hammerItem);
 
     dynamicType *wrench = new dynamicType("assets/tools/wrench.txt",common.dynamicTypes.size(),btVector3(0.02,0.02,0.02));
@@ -387,6 +388,7 @@ int main(int argc, char *argv[])
     wrenchItem->handOffsetX = 1.8;
     wrenchItem->handOffsetY = 3.5;
     wrenchItem->handOffsetZ = -2.0;
+    wrenchItem->iconPath = "assets/tools/icons/wrenchIcon.png";
     common.itemTypes.push_back(wrenchItem);
 
     dynamicType *spraycan = new dynamicType("assets/tools/spraycan.txt",common.dynamicTypes.size(),btVector3(0.02,0.02,0.02));
@@ -398,6 +400,7 @@ int main(int argc, char *argv[])
     spraycanItem->handOffsetX = 1.8;
     spraycanItem->handOffsetY = 2.8;
     spraycanItem->handOffsetZ = -2.0;
+    spraycanItem->iconPath = "assets/tools/icons/paintCanIcon.png";
     common.itemTypes.push_back(spraycanItem);
 
     common.addMusicType("None","");

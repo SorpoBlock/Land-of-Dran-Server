@@ -810,6 +810,7 @@ void clientData::bottomPrint(std::string text,int ms)
 
 void unifiedWorld::pickUpItem(dynamic *holder,item* i,int slot,clientData *source)
 {
+    holder->pickUpItemFireCooldownStart = SDL_GetTicks();
     physicsWorld->removeRigidBody(i);
     i->heldBy = holder;
     i->switchedHolder = true;

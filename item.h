@@ -14,6 +14,7 @@ struct itemType
     int fireAnim = -1;
     bool useDefaultSwing = true;
     std::string uiName = "";
+    std::string iconPath = "";
     dynamicType *model = 0;
 
     itemType(dynamicType *_model,int id);

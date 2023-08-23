@@ -79,6 +79,7 @@ struct dynamic : btRigidBody
     float lastCamY = 0;
     float lastCamZ = 0;
     int lastHeldSlot = 0;
+    int pickUpItemFireCooldownStart = 0;
     int lastControlMask = 0;
     bool lastLeftMouseDown = false;
 

@@ -23,6 +23,8 @@ void itemType::sendToClient(serverClientHandle *netRef)
     data.writeFloat(handOffsetY);
     data.writeFloat(handOffsetZ);
 
+    data.writeString(iconPath);
+
     netRef->send(&data,true);
 }
 
