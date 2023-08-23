@@ -657,10 +657,8 @@ void unifiedWorld::stopSoundLoop(int loopID)
     for(int a = 0; a<worldMusicLoops.size(); a++)
     {
         int id = std::get<0>(worldMusicLoops[a]);
-        std::cout<<" \t "<<id<<" == "<<loopID<<"\n";
         if(id == loopID)
         {
-            std::cout<<"Erasing world loop idx "<<a<<" id "<<loopID<<"\n";
             worldMusicLoops.erase(worldMusicLoops.begin() + a);
             return;
         }
@@ -671,7 +669,6 @@ void unifiedWorld::stopSoundLoop(int loopID)
         int id = std::get<0>(carMusicLoops[a]);
         if(id == loopID)
         {
-            std::cout<<"Erasing car loop idx "<<a<<" id "<<loopID<<"\n";
             carMusicLoops.erase(carMusicLoops.begin() + a);
             return;
         }
