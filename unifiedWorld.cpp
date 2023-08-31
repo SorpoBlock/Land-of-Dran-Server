@@ -26,10 +26,60 @@ void clientData::forceTransformUpdate()
     netRef->send(&forceTransform,true);
 }
 
+void unifiedWorld::radiusImpulse(btVector3 pos,float radius,float power,bool doDamage)
+{
+    btGhostObject *sphere = new btGhostObject();
+    sphere->setUserPointer(this);
+    sphere->setCollisionShape(new btSphereShape(radius));
+    btTransform t = btTransform::getIdentity();
+    t.setOrigin(pos);
+    sphere->setWorldTransform(t);
+    physicsWorld->addCollisionObject(sphere);
+    btAlignedObjectArray<btCollisionObject*> pairs = sphere->getOverlappingPairs();
+
+    for(int a = 0; a<pairs.size(); a++)
+    {
+        btCollisionObject *obj = pairs.at(a);
+        if(!obj)
+            continue;
+
+        if(obj->getUserIndex() != 99)
+            continue;
+
+        btVector3 offset = obj->getWorldTransform().getOrigin() - pos;
+        float dist = offset.length();
+        dist = 1.0 - (dist / radius);
+
+        obj->activate();
+        ((btRigidBody*)obj)->setLinearVelocity(((btRigidBody*)obj)->getLinearVelocity() + offset.normalized() * dist * power);
+
+        dynamic *player = (dynamic*)obj;
+
+        if(doDamage)
+            applyDamage(player,fabs(dist * power * 0.5),"explosion");
+
+        if(!player->isPlayer)
+            continue;
+
+        for(int b = 0; b<users.size(); b++)
+        {
+            if(!users[b]->controlling)
+                continue;
+            if(users[b]->controlling == obj)
+                users[b]->forceTransformUpdate();
+        }
+    }
+
+    physicsWorld->removeCollisionObject(sphere);
+    delete sphere;
+    sphere = 0;
+}
+
 void clientData::setControlling(dynamic *player)
 {
     if(controlling && (player != controlling))
     {
+        controlling->isPlayer = false;
         packet removePhysicsData;
         removePhysicsData.writeUInt(packetType_clientPhysicsData,packetTypeBits);
         removePhysicsData.writeUInt(2,2); //subtype 2, delete client physics object (for old player if it exists)
@@ -41,6 +91,8 @@ void clientData::setControlling(dynamic *player)
 
     if(!controlling)
         return;
+
+    controlling->isPlayer = true;
 
     packet physicsData;
     physicsData.writeUInt(packetType_clientPhysicsData,packetTypeBits);
@@ -1855,6 +1907,18 @@ void unifiedWorld::removeBrick(brick *theBrick)
 
 void unifiedWorld::removeDynamic(dynamic *toRemove,bool dontSendPacket)
 {
+    if(toRemove->isProjectile)
+    {
+        for(int a = 0; a<projectiles.size(); a++)
+        {
+            if(projectiles[a] == toRemove)
+            {
+                projectiles.erase(projectiles.begin() + a);
+                break;
+            }
+        }
+    }
+
     for(unsigned int a = 0; a<items.size(); a++)
     {
         if(items[a] == toRemove)
@@ -2686,4 +2750,22 @@ item *unifiedWorld::addItem(itemType *type)
         tmp->sendToClient(users[a]->netRef);
     return tmp;
 }
+
+item *unifiedWorld::addItem(itemType *type,float x,float y,float z)
+{
+    item *tmp = new item(type,physicsWorld,lastDynamicID,type->itemTypeID);
+    lastDynamicID++;
+    dynamics.push_back(tmp);
+    items.push_back(tmp);
+
+    btTransform t = btTransform::getIdentity();
+    t.setOrigin(btVector3(x,y,z));
+    tmp->setWorldTransform(t);
+
+    for(unsigned int a = 0; a<users.size(); a++)
+        tmp->sendToClient(users[a]->netRef);
+    return tmp;
+}
+
+
 

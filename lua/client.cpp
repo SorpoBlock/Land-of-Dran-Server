@@ -620,6 +620,82 @@ static int getPing(lua_State *L)
     return 1;
 }
 
+static int setVignette(lua_State *L)
+{
+    scope("setVignette");
+
+    int args = lua_gettop(L);
+
+    if(!(args == 2 || args == 5))
+    {
+        error("Function requires 2 or 5 arguments!");
+        return 0;
+    }
+
+    if(args == 5)
+    {
+        float b = lua_tonumber(L,-1);
+        lua_pop(L,1);
+        float g = lua_tonumber(L,-1);
+        lua_pop(L,1);
+        float r = lua_tonumber(L,-1);
+        lua_pop(L,1);
+        float a = lua_tonumber(L,-1);
+        lua_pop(L,1);
+
+        if(b < -10 || b > 10)
+            b = 0;
+        if(g < -10 || g > 10)
+            g = 0;
+        if(r < -10 || r > 10)
+            r = 0;
+        if(a < -10 || a > 10)
+            a = 0;
+
+        clientData *c = popClient(L);
+
+        if(!c)
+        {
+            error("Invalid client!");
+            return 0;
+        }
+
+        packet vignetteData;
+        vignetteData.writeUInt(packetType_serverCommand,packetTypeBits);
+        vignetteData.writeString("vignette");
+        vignetteData.writeFloat(a);
+        vignetteData.writeBit(true);
+        vignetteData.writeFloat(r);
+        vignetteData.writeFloat(g);
+        vignetteData.writeFloat(b);
+        c->netRef->send(&vignetteData,true);
+
+        return 0;
+    }
+
+    float a = lua_tonumber(L,-1);
+    lua_pop(L,1);
+
+    if(a < -10 || a > 10)
+        a = 0;
+
+    clientData *c = popClient(L);
+
+    if(!c)
+    {
+        error("Invalid client!");
+        return 0;
+    }
+
+    packet vignetteData;
+    vignetteData.writeUInt(packetType_serverCommand,packetTypeBits);
+    vignetteData.writeString("vignette");
+    vignetteData.writeFloat(a);
+    vignetteData.writeBit(false);
+    c->netRef->send(&vignetteData,true);
+
+    return 0;
+}
 
 void registerClientFunctions(lua_State *L)
 {
@@ -652,6 +728,7 @@ void registerClientFunctions(lua_State *L)
         {"kick",kick},
         {"getID",getID},
         {"isGuest",isGuest},
+        {"setVignette",setVignette},
         {NULL,NULL}};
     luaL_newmetatable(L,"clientMETATABLE");
     luaL_setfuncs(L,dynamicRegs,0);

@@ -122,10 +122,10 @@ void brick::createUpdatePacket(packet *data)
         data->writeBit(false);
 }
 
-void sayVec(btVector3 in)
+/*void sayVec(btVector3 in)
 {
     std::cout<<in.x()<<","<<in.y()<<","<<in.z()<<"\n";
-}
+}*/
 
 void brickType::initModTerrain(std::string blbFile)
 {

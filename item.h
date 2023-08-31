@@ -8,6 +8,7 @@
 
 struct itemType
 {
+    float rotW=1.0,rotX=0.0,rotY=0.0,rotZ=0.0;
     float handOffsetX=0,handOffsetY=0,handOffsetZ=0;
     int itemTypeID = 0;
     int switchAnim = -1;
@@ -38,6 +39,16 @@ struct item : dynamic
             otherwiseChanged = true;
         swinging = newSwinging;
     }
+
+    int nextFireAnim = -1;
+    float nextFireAnimSpeed = 1.0;
+    int nextFireSound = -1;
+    float nextFireSoundPitch = 1.0;
+    float nextFireSoundGain = 1.0;
+    int nextFireEmitter = -1;
+    std::string nextFireEmitterMesh = "";
+    int fireCooldownMS = 0;
+    int lastFireEvent = 0;
 
     bool hidden = false;
     bool swinging = false;

@@ -25,6 +25,11 @@ void itemType::sendToClient(serverClientHandle *netRef)
 
     data.writeString(iconPath);
 
+    data.writeFloat(rotW);
+    data.writeFloat(rotX);
+    data.writeFloat(rotY);
+    data.writeFloat(rotZ);
+
     netRef->send(&data,true);
 }
 

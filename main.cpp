@@ -20,6 +20,7 @@
 #include "code/lua/brickCarLua.h"
 #include "code/lua/emitter.h"
 #include "code/lua/lightLua.h"
+#include "code/lua/itemLua.h"
 #include <bearssl/bearssl_hash.h>
 #include <conio.h>
 
@@ -162,6 +163,8 @@ int main(int argc, char *argv[])
             }
         }
     }
+
+    silent = true;
 
     preferenceFile settingsFile;
     settingsFile.importFromFile("config.txt");
@@ -315,6 +318,8 @@ int main(int argc, char *argv[])
     btGImpactCollisionAlgorithm::registerAlgorithm(dispatcher);
     //common.physicsWorld = new btDiscreteDynamicsWorld(dispatcher, broadphase, solver, collisionConfiguration);
     common.physicsWorld = new btSoftRigidDynamicsWorld(dispatcher, broadphase, solver, collisionConfiguration);
+    //TODO: This line was only added after radiusImpulse, does it decrease performance?
+    common.physicsWorld->getBroadphase()->getOverlappingPairCache()->setInternalGhostPairCallback(new btGhostPairCallback());
     btVector3 gravity = btVector3(0,-70,0);
     common.physicsWorld->setGravity(gravity);
     common.physicsWorld->setForceUpdateAllAabbs(false);
@@ -351,6 +356,7 @@ int main(int argc, char *argv[])
     registerScheduleFunctions(common.luaState);
     registerEmitterFunctions(common.luaState);
     registerLightFunctions(common.luaState);
+    registerItemFunctions(common.luaState);
     addEventNames(common.luaState);
 
     info("Loading decals");
@@ -402,6 +408,65 @@ int main(int argc, char *argv[])
     spraycanItem->handOffsetZ = -2.0;
     spraycanItem->iconPath = "assets/tools/icons/paintCanIcon.png";
     common.itemTypes.push_back(spraycanItem);
+
+    dynamicType *gun = new dynamicType("assets/gun/gun.txt",common.dynamicTypes.size(),btVector3(0.02,0.02,0.02));
+    gun->standingFrame = 1;
+    gun->filePath = "assets/gun/gun.txt";
+    common.dynamicTypes.push_back(gun);
+
+    itemType *gunItem = new itemType(gun,3);
+    gunItem->uiName = "Gun";
+    gunItem->useDefaultSwing = false;
+    gunItem->handOffsetX = 1.8;
+    gunItem->handOffsetY = 3.3;
+    gunItem->handOffsetZ = -1.0;
+    gunItem->iconPath = "assets/gun/icon.png";
+    common.itemTypes.push_back(gunItem);
+
+    animation fireGun;
+    fireGun.name = "fire";
+    fireGun.startFrame = 1;
+    fireGun.endFrame = 28;
+    fireGun.speedDefault = 0.04;
+    gun->animations.push_back(fireGun);
+
+    dynamicType *shell = new dynamicType("assets/shell/shell.txt",common.dynamicTypes.size(),btVector3(0.015,0.015,0.015));
+    shell->filePath = "assets/shell/shell.txt";
+    common.dynamicTypes.push_back(shell);
+
+    dynamicType *beretta = new dynamicType("assets/beretta/gun.txt",common.dynamicTypes.size(),btVector3(0.3,0.3,0.3));
+    beretta->standingFrame = 85;
+    beretta->filePath = "assets/beretta/gun.txt";
+    common.dynamicTypes.push_back(beretta);
+
+    itemType *berettaItem = new itemType(beretta,4);
+    berettaItem->uiName = "Beretta";
+    berettaItem->useDefaultSwing = false;
+    berettaItem->handOffsetX = 1.8;
+    berettaItem->handOffsetY = 3.8;
+    berettaItem->handOffsetZ = -1.5;
+    berettaItem->iconPath = "assets/beretta/icon.png";
+    common.itemTypes.push_back(berettaItem);
+
+    glm::quat berettaRot = glm::quat(glm::vec3(0,3.1415,0));
+    berettaItem->rotW = berettaRot.w;
+    berettaItem->rotX = berettaRot.x;
+    berettaItem->rotY = berettaRot.y;
+    berettaItem->rotZ = berettaRot.z;
+
+    animation reloadBeretta;
+    reloadBeretta.name = "reload";
+    reloadBeretta.startFrame = 0;
+    reloadBeretta.endFrame = 20;
+    reloadBeretta.speedDefault = 0.04;
+    beretta->animations.push_back(reloadBeretta);
+
+    animation fireBeretta;
+    fireBeretta.name = "fire";
+    fireBeretta.startFrame = 42;
+    fireBeretta.endFrame = 75;
+    fireBeretta.speedDefault = 0.04;
+    beretta->animations.push_back(fireBeretta);
 
     common.addMusicType("None","");
     common.addSoundType("BrickBreak","assets/sound/breakBrick.wav");
@@ -457,6 +522,17 @@ int main(int argc, char *argv[])
     common.addSoundType("DrumsetPedalC","assets/sound/Drumset/DrumsetPedalC.wav");
     common.addSoundType("DrumsetPowerSnare","assets/sound/Drumset/DrumsetPowerSnare.wav");
     common.addSoundType("DrumsetTom","assets/sound/Drumset/DrumsetTom.wav");
+
+    common.addSoundType("Launch","assets/sound/Launch.wav");
+    common.addSoundType("Explosion","assets/sound/665092__tgerginov__explosion.wav");
+
+    common.addSoundType("oof1","assets/sound/pain/oof1.wav");
+    common.addSoundType("oof2","assets/sound/pain/oof2.wav");
+    common.addSoundType("oof3","assets/sound/pain/oof3.wav");
+    common.addSoundType("oof4","assets/sound/pain/oof4.wav");
+
+    common.addSoundType("berettaShot","assets/sound/berettaShot.wav");
+    common.addSoundType("berettaReload","assets/sound/berettaReload.wav");
 
     preferenceFile addonsList;
     addonsList.importFromFile("add-ons/add-onsList.txt");
@@ -659,6 +735,36 @@ int main(int argc, char *argv[])
               //  info("Last FPS: " + std::to_string(fps));
             frames = 0;
             lastFrameCheck = SDL_GetTicks();
+        }
+
+        for(unsigned int a = 0; a<common.projectiles.size(); a++)
+        {
+            dynamic *proj = common.projectiles[a];
+            if(!proj)
+                continue;
+
+            if(proj->getLinearVelocity().length() < 8)
+                continue;
+
+            btTransform t = proj->getWorldTransform();
+            t.setOrigin(btVector3(0,0,0));
+            btQuaternion oldQuat = t.getRotation();
+
+            btVector3 currentUp = t * btVector3(0,1,0);
+            btVector3 desiredUp = proj->getLinearVelocity();
+            desiredUp = desiredUp.normalized();
+
+            float dot = btDot(currentUp,desiredUp);
+            if(dot > 0.99999 || dot < -0.99999)
+                continue;
+
+            btVector3 cross = btCross(currentUp,desiredUp);
+            btQuaternion rot = btQuaternion(cross.x(),cross.y(),cross.z(),1+dot);
+            rot = rot.normalized();
+
+            t = proj->getWorldTransform();
+            t.setRotation(rot * oldQuat);
+            proj->setWorldTransform(t);
         }
 
         for(unsigned int a = 0; a<common.brickCars.size(); a++)
@@ -892,6 +998,8 @@ int main(int argc, char *argv[])
         int msDiff = SDL_GetTicks() - msAtLastUpdate;
         msAtLastUpdate = SDL_GetTicks();
 
+        std::vector<dynamic*> projectilesToDeleteThatHitStuff;
+
         //if(msAtLastUpdate+msBetweenUpdates <= SDL_GetTicks())
         if(true)
         {
@@ -1037,11 +1145,92 @@ int main(int argc, char *argv[])
                 btRigidBody* obA = (btRigidBody*)contactManifold->getBody0();
                 btRigidBody* obB = (btRigidBody*)contactManifold->getBody1();
 
+                if(obA == obB)
+                    continue;
+
+                if(!(obA->getUserIndex() == bodyUserIndex_plane || obB->getUserIndex() == bodyUserIndex_plane))
+                {
+                    if(obB->getUserIndex() == bodyUserIndex_dynamic)
+                    {
+                        dynamic *other = (dynamic*)obB->getUserPointer();
+                        if(other->isProjectile)
+                        {
+                            bool projCont = false;
+                            for(int x = 0; x<projectilesToDeleteThatHitStuff.size(); x++)
+                            {
+                                if(projectilesToDeleteThatHitStuff[x] == other)
+                                {
+                                    projCont = true;
+                                    break;
+                                }
+                            }
+                            if(projCont)
+                                continue;
+
+                            if(obA->getUserIndex() == bodyUserIndex_brick)
+                            {
+                                btVector3 o = other->getWorldTransform().getOrigin();
+                                projectileHit((brick*)obA->getUserPointer(),o.x(),o.y(),o.z(),other->projectileTag);
+                            }
+                            else if(obA->getUserIndex() == bodyUserIndex_dynamic)
+                            {
+                                btVector3 o = other->getWorldTransform().getOrigin();
+                                projectileHit((dynamic*)obA->getUserPointer(),o.x(),o.y(),o.z(),other->projectileTag);
+                            }
+
+                            projectilesToDeleteThatHitStuff.push_back(other);
+                            continue;
+                        }
+                    }
+
+                    if(obA->getUserIndex() == bodyUserIndex_dynamic)
+                    {
+                        dynamic *other = (dynamic*)obA->getUserPointer();
+                        if(other->isProjectile)
+                        {
+                            bool projCont = false;
+                            for(int x = 0; x<projectilesToDeleteThatHitStuff.size(); x++)
+                            {
+                                if(projectilesToDeleteThatHitStuff[x] == other)
+                                {
+                                    projCont = true;
+                                    break;
+                                }
+                            }
+                            if(projCont)
+                                continue;
+
+                            if(obB->getUserIndex() == bodyUserIndex_brick)
+                            {
+                                btVector3 o = other->getWorldTransform().getOrigin();
+                                projectileHit((brick*)obB->getUserPointer(),o.x(),o.y(),o.z(),other->projectileTag);
+                            }
+                            else if(obB->getUserIndex() == bodyUserIndex_dynamic)
+                            {
+                                btVector3 o = other->getWorldTransform().getOrigin();
+                                projectileHit((dynamic*)obB->getUserPointer(),o.x(),o.y(),o.z(),other->projectileTag);
+                            }
+
+                            projectilesToDeleteThatHitStuff.push_back(other);
+                            continue;
+                        }
+                    }
+                }
+                /*else
+                {
+                    std::cout<<"Breaking: "<<contactManifold->getContactBreakingThreshold()<<"\n";
+                    std::cout<<"Processing: "<<contactManifold->getContactProcessingThreshold()<<"\n";
+                    std::cout<<"Contacts: "<<contactManifold->getNumContacts()<<"\n";
+                    std::cout<<"Distance: "<<contactManifold->getContactPoint(0).getDistance()<<"\n";
+                }*/
+
                 if(!(obA->getUserIndex() == bodyUserIndex_builtCar || obB->getUserIndex() == bodyUserIndex_builtCar))
                     continue;
 
                 if(obA->getUserIndex() == bodyUserIndex_plane || obB->getUserIndex() == bodyUserIndex_plane)
                     continue;
+
+                //All of the following is just for the impact sound lmao:
 
                 if((unsigned)obA->getUserIndex2() + 1000 > SDL_GetTicks())
                     continue;
@@ -1076,6 +1265,7 @@ int main(int argc, char *argv[])
                     common.playSound("FastImpact",pos.x(),pos.y(),pos.z());
                 }
             }
+
             /*int active = 0;
             for(unsigned int a = 0; a<common.brickCars.size(); a++)
             {
@@ -1177,6 +1367,22 @@ int main(int argc, char *argv[])
                 for(int a = 0; a<common.ropes.size(); a++)
                     common.ropes[a]->addToPacket(&ropeTransformPacket);
                 common.theServer->send(&ropeTransformPacket,false);
+            }
+        }
+
+        for(int a = 0; a<projectilesToDeleteThatHitStuff.size(); a++)
+            common.removeDynamic(projectilesToDeleteThatHitStuff[a]);
+        projectilesToDeleteThatHitStuff.clear();
+
+        for(int a = 0; a<common.queuedRespawn.size(); a++)
+        {
+            if(common.queuedRespawnTime[a] < SDL_GetTicks())
+            {
+                common.spawnPlayer(common.queuedRespawn[a],0,10,0);
+
+                common.queuedRespawn.erase(common.queuedRespawn.begin() + a);
+                common.queuedRespawnTime.erase(common.queuedRespawnTime.begin() + a);
+                break;
             }
         }
 

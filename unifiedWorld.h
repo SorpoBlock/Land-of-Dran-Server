@@ -14,6 +14,7 @@
 #include "code/rope.h"
 #include <CURL/curl.h>
 #include "code/octree/RTree.h"
+#include <BulletCollision/CollisionDispatch/btGhostObject.h>
 
 typedef RTree<brick*,double,3> brickPointerTree;
 
@@ -191,6 +192,7 @@ struct unifiedWorld
     unsigned int lastLightID = 0;
 
     item* addItem(itemType *type);
+    item* addItem(itemType *type,float x,float y,float z);
     dynamic* addDynamic(int typeID,float red = 1,float green = 1,float blue = 1);
     void removeItem(item *toRemove);
     void removeDynamic(dynamic *toRemove,bool dontSendPacket = false);
@@ -236,6 +238,7 @@ struct unifiedWorld
     int startSoundLoop(int soundID,brickCar *mount,float pitch);
     void stopSoundLoop(int loopID);
 
+    std::vector<dynamic*> projectiles;
     std::vector<item*> items;
     std::vector<clientData*> users;
     std::vector<dynamic*> dynamics;
@@ -281,11 +284,19 @@ struct unifiedWorld
         return 0;
     }
 
+    void radiusImpulse(btVector3 pos,float radius,float power,bool doDamage);
+
     //Returns false if wheels have different rotations
     bool compileBrickCar(brickCar *toAdd,float &heightCorrection,bool wheelsAlready = false,btVector3 origin = btVector3(0,0,0));
     void removeBrickCar(brickCar *toRemove);
 
     void messageAll(std::string text,std::string category = "generic");
+
+    unsigned int respawnTimeMS = 5000;
+    std::vector<clientData*> queuedRespawn;
+    std::vector<unsigned int> queuedRespawnTime;
+    unsigned int oofCounter = 1;
+    void applyDamage(dynamic *d,float damage,std::string cause="");
 };
 
 

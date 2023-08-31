@@ -25,7 +25,7 @@ struct animation
 {
     int startFrame;
     int endFrame;
-    float speedDefault;
+    float speedDefault = 0.04;
     std::string name;
 };
 
@@ -36,6 +36,7 @@ struct dynamicType
     int standingFrame;
     std::vector<animation> animations;
     float eyeOffsetX,eyeOffsetY,eyeOffsetZ;
+    btVector3 networkScale = btVector3(1,1,1);
 
     //Real values used in the physics engine and also sent to client:
     btVector3 finalHalfExtents;
@@ -57,6 +58,12 @@ struct item;
 
 struct dynamic : btRigidBody
 {
+    float health = 100.0;
+    bool canTakeDamage = false;
+
+    std::string projectileTag = "";
+    bool isProjectile = false;
+
     bool lastInWater = false;
     unsigned int lastSplashEffect = 0;
     bool isJetting = false;

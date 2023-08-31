@@ -270,6 +270,60 @@ static int setRestitution(lua_State *L)
     return 0;
 }
 
+static int applyDamage(lua_State *L)
+{
+    scope("applyDamage");
+
+    int args = lua_gettop(L);
+
+    if(args < 2 || args > 3)
+    {
+        error("This function takes 2 or 3 arguments!");
+        return 0;
+    }
+
+    std::string cause = "";
+    if(args == 3)
+    {
+        const char *causeBuf = lua_tostring(L,-1);
+        lua_pop(L,1);
+        if(!causeBuf)
+        {
+            error("Invalid cause string!");
+            return 0;
+        }
+        cause = std::string(causeBuf);
+    }
+
+    float dam = lua_tonumber(L,-1);
+    lua_pop(L,1);
+
+    dynamic *object = popDynamic(L);
+
+    if(!object)
+        return 0;
+
+    common_lua->applyDamage(object,dam,cause);
+
+    return 0;
+}
+
+static int setCanTakeDamage(lua_State *L)
+{
+    scope("setCanTakeDamage");
+    bool canTake = lua_toboolean(L,-1);
+    lua_pop(L,1);
+
+    dynamic *object = popDynamic(L);
+
+    if(!object)
+        return 0;
+
+    object->canTakeDamage = canTake;
+
+    return 0;
+}
+
 static int getPosition(lua_State *L)
 {
     scope("getDynamicPositionLua");
@@ -452,7 +506,6 @@ static int addDynamic(lua_State *L)
 
 
     dynamic *tmp = common_lua->addDynamic(typeID,0,0,0);
-    int idx = tmp->serverID;
 
     pushDynamic(L,tmp);
     return 1;
@@ -579,9 +632,293 @@ static int getHeldTool(lua_State *L)
         if(!object->holding[object->lastHeldSlot])
             lua_pushnil(L);
         else
-            lua_pushstring(L,object->holding[object->lastHeldSlot]->heldItemType->uiName.c_str());
+            pushItem(L,object->holding[object->lastHeldSlot]);
+            //lua_pushstring(L,object->holding[object->lastHeldSlot]->heldItemType->uiName.c_str());
     }
     return 1;
+}
+
+static int addProjectile(lua_State *L)
+{
+    scope("addProjectile");
+
+    //dyanmicTypeID,x,y,z,velX,velY,velZ,tag
+    int args = lua_gettop(L);
+
+    if(args < 7 || args > 8)
+    {
+        error("Function requires 7 or 8 arguments!");
+        lua_pushnil(L);
+        return 1;
+    }
+
+    std::string tag = "";
+
+    if(args == 8)
+    {
+        const char *tagBuf = lua_tostring(L,-1);
+        lua_pop(L,1);
+        if(!tagBuf)
+        {
+            error("Invalid tag string argument!");
+            lua_pushnil(L);
+            return 1;
+        }
+        tag = std::string(tagBuf);
+    }
+
+    float velZ = lua_tonumber(L,-1);
+    lua_pop(L,1);
+    float velY = lua_tonumber(L,-1);
+    lua_pop(L,1);
+    float velX = lua_tonumber(L,-1);
+    lua_pop(L,1);
+
+    float z = lua_tonumber(L,-1);
+    lua_pop(L,1);
+    float y = lua_tonumber(L,-1);
+    lua_pop(L,1);
+    float x = lua_tonumber(L,-1);
+    lua_pop(L,1);
+
+    int typeID = lua_tointeger(L,-1);
+    lua_pop(L,1);
+
+    if(typeID < 0 || typeID >= common_lua->dynamicTypes.size())
+    {
+        error("Type ID out of range!");
+        lua_pushnil(L);
+        return 1;
+    }
+
+    dynamic *projectile = common_lua->addDynamic(typeID,0,0,0);
+    projectile->isProjectile = true;
+    projectile->setLinearVelocity(btVector3(velX,velY,velZ));
+    btTransform t = btTransform::getIdentity();
+    t.setOrigin(btVector3(x,y,z));
+    projectile->setWorldTransform(t);
+    projectile->setActivationState(DISABLE_DEACTIVATION);
+    projectile->projectileTag = tag;
+
+    common_lua->projectiles.push_back(projectile);
+
+    pushDynamic(L,projectile);
+    return 1;
+}
+
+static int giveItem(lua_State *L)
+{
+    scope("giveItem");
+
+    int args = lua_gettop(L);
+    if(args != 2)
+    {
+        error("Function expects 2 arguments!");
+        lua_pushboolean(L,false);
+        return 1;
+    }
+
+    item *i = popItem(L);
+
+    if(!i)
+    {
+        error("Invalid item!");
+        lua_pushboolean(L,false);
+        return 1;
+    }
+
+    dynamic *dyn = popDynamic(L);
+
+    if(!dyn)
+    {
+        error("Invalid dynamic!");
+        lua_pushboolean(L,false);
+        return 1;
+    }
+
+    int freeSlot = -1;
+    for(int b = 0; b<inventorySize; b++)
+    {
+        if(!dyn->holding[b])
+        {
+            freeSlot = b;
+            break;
+        }
+    }
+
+    if(freeSlot == -1)
+    {
+        lua_pushboolean(L,false);
+        return 1;
+    }
+
+    clientData *source = 0;
+    for(int b = 0; b<common_lua->users.size(); b++)
+    {
+        if(!common_lua->users[b])
+            continue;
+        if(!common_lua->users[b]->controlling)
+            continue;
+
+        if(common_lua->users[b]->controlling == dyn)
+        {
+            source = common_lua->users[b];
+            break;
+        }
+    }
+
+    common_lua->pickUpItem(dyn,i,freeSlot,source);
+
+    lua_pushboolean(L,true);
+    return 1;
+}
+
+static int isProjectile(lua_State *L)
+{
+    scope("isProjectile");
+
+    dynamic *object = popDynamic(L);
+
+    if(!object)
+    {
+        lua_pushboolean(L,false);
+        return 1;
+    }
+
+    lua_pushboolean(L,object->isProjectile);
+    return 1;
+}
+
+static int isPlayer(lua_State *L)
+{
+    scope("isPlayer");
+
+    dynamic *object = popDynamic(L);
+
+    if(!object)
+    {
+        lua_pushboolean(L,false);
+        return 1;
+    }
+
+    lua_pushboolean(L,object->isPlayer);
+    return 1;
+}
+
+static int getProjectileIdx(lua_State *L)
+{
+    int idx = lua_tointeger(L,1);
+    lua_pop(L,1);
+
+    if(idx < 0 || (int)idx >= (int)common_lua->projectiles.size())
+    {
+        error("getProjectileIdx invalid index " + std::to_string(idx));
+        lua_pushnil(L);
+        return 1;
+    }
+
+    pushDynamic(L,common_lua->projectiles[idx]);
+
+    return 1;
+}
+
+static int getNumProjectiles(lua_State *L)
+{
+    lua_pushnumber(L,common_lua->projectiles.size());
+    return 1;
+}
+
+static int switchHeldSlot(lua_State *L)
+{
+    scope("switchHeldSlot");
+    int slot = lua_tointeger(L,-1);
+    lua_pop(L,1);
+
+    dynamic *object = popDynamic(L);
+
+    if(!object)
+        return 0;
+
+    if(slot >= inventorySize)
+        slot = -1;
+    if(slot < -1)
+        slot = -1;
+
+    object->lastHeldSlot = slot;
+
+    for(unsigned int a = 0; a<inventorySize; a++)
+    {
+        if(object->holding[a])
+        {
+            object->holding[a]->setHidden(true);
+            object->holding[a]->setSwinging(false);
+        }
+    }
+
+    if(slot != -1)
+    {
+        if(object->holding[slot])
+            object->holding[slot]->setHidden(false);
+    }
+
+    return 0;
+}
+
+static int setWalking(lua_State *L)
+{
+    scope("setWalking");
+    bool walking = lua_toboolean(L,-1);
+    lua_pop(L,1);
+
+    dynamic *object = popDynamic(L);
+
+    if(!object)
+        return 0;
+
+    object->isPlayer = true;
+    object->walking = walking;
+
+    return 0;
+}
+
+static int setHeadPitch(lua_State *L)
+{
+    scope("setHeadPitch");
+    float headPitch = lua_tonumber(L,-1);
+    lua_pop(L,1);
+
+    dynamic *object = popDynamic(L);
+
+    if(!object)
+        return 0;
+
+    if(headPitch < -1)
+        headPitch = -1;
+    if(headPitch > 1)
+        headPitch = 1;
+
+    object->isPlayer = true;
+    object->lastCamY = headPitch;
+
+    return 0;
+}
+
+static int fireHeldGun(lua_State *L)
+{
+    scope("fireHeldGun");
+
+    dynamic *object = popDynamic(L);
+
+    if(!object)
+        return 0;
+
+    if(object->lastHeldSlot == -1)
+        return 0;
+
+    btVector3 firePos = object->getWorldTransform().getOrigin() + btVector3(object->type->eyeOffsetX,object->type->eyeOffsetY,object->type->eyeOffsetZ);
+    weaponFire(object,object->holding[object->lastHeldSlot],firePos.x(),firePos.y(),firePos.z(),0,object->lastCamY,0);
+
+    return 0;
 }
 
 void registerDynamicFunctions(lua_State *L)
@@ -607,6 +944,15 @@ void registerDynamicFunctions(lua_State *L)
         {"getAngularVelocity",getAngularVelocity},
         {"getRotation",getRotation},
         {"getHeldTool",getHeldTool},
+        {"giveItem",giveItem},
+        {"isProjectile",isProjectile},
+        {"isPlayer",isPlayer},
+        {"applyDamage",applyDamage},
+        {"setCanTakeDamage",setCanTakeDamage},
+        {"switchHeldSlot",switchHeldSlot},
+        {"setWalking",setWalking},
+        {"setHeadPitch",setHeadPitch},
+        {"fireHeldGun",fireHeldGun},
         {NULL,NULL}};
     luaL_newmetatable(L,"dynamic");
     luaL_setfuncs(L,dynamicRegs,0);
@@ -616,9 +962,12 @@ void registerDynamicFunctions(lua_State *L)
 
     //Register functions
     lua_register(L,"getDynamicIdx",getDynamicIdx);
+    lua_register(L,"getProjectileIdx",getProjectileIdx);
     lua_register(L,"getPlayerByName",getDynamicOfClient);
     lua_register(L,"getNumDynamics",getNumDynamics);
     lua_register(L,"addDynamic",addDynamic);
+    lua_register(L,"addProjectile",addProjectile);
+    lua_register(L,"getNumProjectiles",getNumProjectiles);
 }
 
 

@@ -15,5 +15,7 @@ clientData* popClient(lua_State *L);
 void pushClient(lua_State *L,clientData* client);
 void pushDynamic(lua_State *L,dynamic *object);
 dynamic *popDynamic(lua_State *L,bool supressErrors = false);
+void pushItem(lua_State *L,item *object);
+item *popItem(lua_State *L,bool supressErrors = false);
 
 #endif // PUSHPOPCLASSES_H_INCLUDED

@@ -19,5 +19,9 @@ void clientLeaveEvent(clientData *source);
 bool clientTryLoadCarEvent(clientData *source,brickCar *theCar,bool loadCarAsCar);
 bool clientChat(clientData *source,std::string &message);
 void clientJoin(clientData *source);
+void projectileHit(brick *hitBrick,float x,float y,float z,std::string tag);
+void projectileHit(dynamic *hitDynamic,float x,float y,float z,std::string tag);
+void weaponFire(dynamic *player,item *gun,float x,float y,float z,float dirX,float dirY,float dirZ);
+bool dynamicDeath(dynamic *dying,std::string cause);
 
 #endif // EVENTS_H_INCLUDED

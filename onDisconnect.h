@@ -75,6 +75,16 @@ void onDisconnect(server *host,serverClientHandle *client)
                 common->playSound("PlayerLeave");
             }
 
+            for(int b = 0; b<common->queuedRespawn.size(); b++)
+            {
+                if(common->queuedRespawn[b] == common->users[a])
+                {
+                    common->queuedRespawn.erase(common->queuedRespawn.begin() + b);
+                    common->queuedRespawnTime.erase(common->queuedRespawnTime.begin() + b);
+                    break;
+                }
+            }
+
             delete common->users[a];
             common->users[a] = 0;
             common->users.erase(common->users.begin() + a);

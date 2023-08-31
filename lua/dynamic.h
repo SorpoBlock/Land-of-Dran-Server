@@ -3,6 +3,7 @@
 
 #include "code/unifiedWorld.h"
 #include "code/lua/pushPopClasses.h"
+#include "code/lua/events.h"
 
 extern unifiedWorld *common_lua;
 

@@ -1,5 +1,50 @@
 #include "pushPopClasses.h"
 
+void pushItem(lua_State *L,item *object)
+{
+    if(!object)
+    {
+        lua_pushnil(L);
+        return;
+    }
+
+    lua_newtable(L);
+    lua_getglobal(L,"itemMETATABLE");
+    lua_setmetatable(L,-2);
+    lua_pushinteger(L,object->serverID);
+    lua_setfield(L,-2,"id");
+}
+
+item *popItem(lua_State *L,bool supressErrors)
+{
+    if(!lua_istable(L,-1))
+    {
+        lua_pop(L,1);
+        if(!supressErrors)
+            error("No table for item argument!");
+        return 0;
+    }
+
+    lua_getfield(L, -1, "id");
+    if(!lua_isinteger(L,-1))
+    {
+        if(!supressErrors)
+            error("No ID for item argument!");
+        lua_pop(L,2);
+        return 0;
+    }
+
+    int itemID = lua_tointeger(L,-1);
+    lua_pop(L,2);
+
+    for(unsigned int a = 0; a<common_lua->items.size(); a++)
+        if(common_lua->items[a]->serverID == itemID)
+            return common_lua->items[a];
+
+    error("Item ID no longer valid");
+    return 0;
+}
+
 void pushDynamic(lua_State *L,dynamic *object)
 {
     if(!object)

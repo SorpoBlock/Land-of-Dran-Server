@@ -67,6 +67,9 @@ void dynamicType::sendTypeToClient(serverClientHandle *client,int id)
     data.writeFloat(eyeOffsetX);
     data.writeFloat(eyeOffsetY);
     data.writeFloat(eyeOffsetZ);
+    data.writeFloat(networkScale.x());
+    data.writeFloat(networkScale.y());
+    data.writeFloat(networkScale.z());
     data.writeUInt(animations.size(),8);
     for(unsigned int a = 0; a<animations.size(); a++)
     {
@@ -125,8 +128,14 @@ std::string getFolderFromPath(std::string in)
     return in;
 }
 
+void sayVec(btVector3 in)
+{
+    std::cout<<in.x()<<","<<in.y()<<","<<in.z()<<"\n";
+}
+
 dynamicType::dynamicType(std::string filePath,int id,btVector3 scale)
 {
+    networkScale = scale;
     dynamicTypeID = id;
     filePath = filePath;
 
@@ -219,6 +228,10 @@ dynamicType::dynamicType(std::string filePath,int id,btVector3 scale)
 
     aabbMax = btVector3(aabbMaxAI.x,aabbMaxAI.y,aabbMaxAI.z);
     aabbMin = btVector3(aabbMinAI.x,aabbMinAI.y,aabbMinAI.z);
+
+    std::cout<<filePath<<"\n";
+    std::cout<<"aabbMin: "; sayVec(aabbMin);
+    std::cout<<"aabbMax: "; sayVec(aabbMax);
 
     btVector3 size = aabbMax-aabbMin;
     size /= 2.0;

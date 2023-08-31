@@ -794,6 +794,28 @@ static int setWaterLevel(lua_State *L)
     common_lua->theServer->send(&waterLevel,true);
 }
 
+static int setRespawnTime(lua_State *L)
+{
+    scope("setRespawnTime");
+
+    int args = lua_gettop(L);
+    if(args != 1)
+    {
+        error("Expected 1 argument, got: " + std::to_string(args));
+        return 0;
+    }
+
+    float level = lua_tonumber(L,-1);
+    lua_pop(L,1);
+
+    if(level < 0)
+        level = 0;
+    if(level > 60000)
+        level = 60000;
+
+    common_lua->respawnTimeMS = level;
+}
+
 static int setAudioEffect(lua_State *L)
 {
     scope("setAudioEffect");
@@ -846,6 +868,51 @@ static int setAudioEffect(lua_State *L)
     return 0;
 }
 
+static int radiusImpulse(lua_State *L)
+{
+    scope("radiusImpulse");
+
+    int args = lua_gettop(L);
+    if(args < 5 || args > 6)
+    {
+        error("This function takes 5 or 6 arguments");
+        return 0;
+    }
+
+    bool doDamage = false;
+    if(args == 6)
+    {
+        doDamage = lua_toboolean(L,-1);
+        lua_pop(L,1);
+    }
+
+    float power = lua_tonumber(L,-1);
+    lua_pop(L,1);
+    float radius = lua_tonumber(L,-1);
+    lua_pop(L,1);
+    float z = lua_tonumber(L,-1);
+    lua_pop(L,1);
+    float y = lua_tonumber(L,-1);
+    lua_pop(L,1);
+    float x = lua_tonumber(L,-1);
+    lua_pop(L,1);
+
+    if(power < -1000 || power > 1000)
+    {
+        error("Power must be between -1000 and 1000");
+        return 0;
+    }
+
+    if(radius <= 0 || radius >= 100)
+    {
+        error("Radius must be between 0 and 100");
+        return 0;
+    }
+
+    common_lua->radiusImpulse(btVector3(x,y,z),radius,power,doDamage);
+    return 0;
+}
+
 void bindMiscFuncs(lua_State *L)
 {
     lua_register(L,"echo",LUAecho);
@@ -864,6 +931,8 @@ void bindMiscFuncs(lua_State *L)
     lua_register(L,"setColorPalette",setColorPalette);
     lua_register(L,"setWaterLevel",setWaterLevel);
     lua_register(L,"setAudioEffect",setAudioEffect);
+    lua_register(L,"radiusImpulse",radiusImpulse);
+    lua_register(L,"setRespawnTime",setRespawnTime);
 }
 
 #endif // MISCFUNCTIONS_H_INCLUDED

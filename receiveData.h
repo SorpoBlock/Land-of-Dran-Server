@@ -1434,6 +1434,9 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                 {
                     if(source->controlling->holding[invSlot] && leftMouseDown)
                     {
+                        btVector3 firePos = pos + btVector3(source->controlling->type->eyeOffsetX,source->controlling->type->eyeOffsetY,source->controlling->type->eyeOffsetZ);
+                        weaponFire(source->controlling,source->controlling->holding[invSlot],firePos.x(),firePos.y(),firePos.z(),camDirX,camDirY,camDirZ);
+
                         source->controlling->holding[invSlot]->setSwinging(true);
                         //TODO: Yeah this is bad, but these tools will be moved to Lua soon
                         if(source->controlling->holding[invSlot]->heldItemType->uiName == "Hammer")
