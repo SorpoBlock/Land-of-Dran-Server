@@ -134,7 +134,8 @@ struct schedule
     unsigned int timeToExecute = 0;
     unsigned int scheduleID = 0;
     std::string functionName = "";
-    std::string optionalString = "";
+    int numLuaArgs = 0;
+    //std::string optionalString = "";
 };
 
 struct eventListener
@@ -168,7 +169,7 @@ struct unifiedWorld
     emitter *addEmitter(emitterType *type,float x=0,float y=0,float z=0,bool dontSend = false);
 
     bool runningSchedules = false;
-    unsigned int lastScheduleID = 0;
+    unsigned int lastScheduleID = 1;
     std::vector<schedule> schedules;
     std::vector<schedule> tmpSchedules;
     std::vector<unsigned int> tmpScheduleIDsToDelete;

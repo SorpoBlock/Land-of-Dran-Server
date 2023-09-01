@@ -82,7 +82,7 @@ struct dynamic : btRigidBody
     void nodeColorsPacket(packet *data);
 
     bool isPlayer = false;
-    float lastCamX = 0;
+    float lastCamX = 1;
     float lastCamY = 0;
     float lastCamZ = 0;
     int lastHeldSlot = 0;

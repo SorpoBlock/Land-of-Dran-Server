@@ -248,6 +248,10 @@ static int setRotation(lua_State *L)
 
     if(object->isPlayer)
     {
+        btVector3 lookDir = t * btVector3(0,0,1);
+        object->lastCamX = lookDir.x();
+        object->lastCamZ = lookDir.z();
+
         for(int b = 0; b<common_lua->users.size(); b++)
             if(common_lua->users[b]->controlling == object)
                 common_lua->users[b]->forceTransformUpdate();
@@ -363,6 +367,26 @@ static int getVelocity(lua_State *L)
     lua_pushnumber(L,vel.x());
     lua_pushnumber(L,vel.y());
     lua_pushnumber(L,vel.z());
+    return 3;
+}
+
+static int getCamDir(lua_State *L)
+{
+    scope("getCamDir");
+
+    dynamic *object = popDynamic(L);
+
+    if(!object)
+    {
+        lua_pushnil(L);
+        lua_pushnil(L);
+        lua_pushnil(L);
+        return 3;
+    }
+
+    lua_pushnumber(L,object->lastCamX);
+    lua_pushnumber(L,object->lastCamY);
+    lua_pushnumber(L,object->lastCamZ);
     return 3;
 }
 
@@ -916,7 +940,7 @@ static int fireHeldGun(lua_State *L)
         return 0;
 
     btVector3 firePos = object->getWorldTransform().getOrigin() + btVector3(object->type->eyeOffsetX,object->type->eyeOffsetY,object->type->eyeOffsetZ);
-    weaponFire(object,object->holding[object->lastHeldSlot],firePos.x(),firePos.y(),firePos.z(),0,object->lastCamY,0);
+    weaponFire(object,object->holding[object->lastHeldSlot],firePos.x(),firePos.y(),firePos.z(),object->lastCamX,object->lastCamY,object->lastCamZ);
 
     return 0;
 }
@@ -953,6 +977,7 @@ void registerDynamicFunctions(lua_State *L)
         {"setWalking",setWalking},
         {"setHeadPitch",setHeadPitch},
         {"fireHeldGun",fireHeldGun},
+        {"getCamDir",getCamDir},
         {NULL,NULL}};
     luaL_newmetatable(L,"dynamic");
     luaL_setfuncs(L,dynamicRegs,0);

@@ -1055,7 +1055,57 @@ int main(int argc, char *argv[])
                     }
                     else
                     {
-                        if(lua_pcall(common.luaState,0,0,0) != 0)
+                        int argsToPush = 0;
+
+                        if((*sch).numLuaArgs > 0)
+                        {
+                            lua_getglobal(common.luaState,"scheduleArgs");
+                            if(!lua_istable(common.luaState,-1))
+                            {
+                                error("Where did your scheduleArgs table go!");
+                                lua_pop(common.luaState,1);
+                            }
+                            else
+                            {
+                                lua_pushinteger(common.luaState,(*sch).scheduleID);
+                                lua_gettable(common.luaState,-2);
+
+                                //func name
+                                //scheduleArgs table
+                                //our specific args table
+
+                                if(lua_isnil(common.luaState,-1))
+                                {
+                                    lua_pop(common.luaState,2);
+                                }
+                                else
+                                {
+                                    for(int g = (*sch).numLuaArgs-1; g>=0; g--)
+                                    {
+                                        lua_pushinteger(common.luaState,g+1);
+                                        lua_gettable(common.luaState,3);
+                                    }
+
+                                    //func name
+                                    //scheduleArgs table
+                                    //our specific args table
+                                    //arg1...
+                                    //arg2...
+
+                                    lua_pushinteger(common.luaState,(*sch).scheduleID);
+                                    lua_pushnil(common.luaState);
+
+                                    lua_settable(common.luaState,2);
+
+                                    lua_remove(common.luaState,3);
+                                    lua_remove(common.luaState,2);
+
+                                    argsToPush = (*sch).numLuaArgs;
+                                }
+                            }
+                        }
+
+                        if(lua_pcall(common.luaState,argsToPush,0,0) != 0)
                         {
                             error("Error in schedule " + std::to_string((*sch).scheduleID) + " func: " + (*sch).functionName );
                             if(lua_gettop(common.luaState) > 0)

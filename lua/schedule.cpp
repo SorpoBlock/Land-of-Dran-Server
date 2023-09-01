@@ -4,56 +4,70 @@ static int scheduleLua(lua_State *L)
 {
     scope("scheduleLua");
 
-    const char *argName;
-    const char *funcName;
+    int args = lua_gettop(L);
 
-    if(lua_gettop(L) == 3)
+    if(args < 2)
     {
-        argName = lua_tostring(L,-1);
-        lua_pop(L,1);
-        funcName = lua_tostring(L,-1);
-        lua_pop(L,1);
-    }
-    else if(lua_gettop(L) == 2)
-    {
-        argName = 0;
-        funcName = lua_tostring(L,-1);
-        lua_pop(L,1);
-    }
-    else
-    {
-        error("Schedule takes 2 or 3 arguments.");
+        error("At least 2 arguments required!");
         lua_pushnil(L);
         return 1;
     }
 
-    if(!funcName)
+    const char *functionName = lua_tostring(L,2);
+
+    if(!functionName)
     {
-        error("No function name provided!");
+        error("Invalid function name string!");
         lua_pushnil(L);
         return 1;
     }
 
-    int ms = lua_tointeger(L,-1);
-    lua_pop(L,1);
-
-    //std::cout<<"Scheduled function: "<<std::string(funcName)<<" in "<<ms<<"ms with arg: "<<(argName?std::string(argName):"None")<<" "<<lua_gettop(L)<<" on stack\n";
-
-    if(ms < 1)
+    int milliseconds = lua_tointeger(L,1);
+    if(milliseconds < 1)
     {
-        error("Milliseconds delay should be > 0" + std::to_string(ms));
+        error("Milliseconds must be > 0");
         lua_pushnil(L);
         return 1;
+    }
+
+    lua_remove(L,2);
+    lua_remove(L,1);
+
+    if(args > 2)
+    {
+        lua_newtable(L);
+        lua_insert(L,1);
+
+        for(int a = 2; a<args; a++)
+        {
+            lua_pushinteger(L,a-1);
+            lua_insert(L,-2);
+            lua_settable(L,1);
+        }
+
+        lua_getglobal(L,"scheduleArgs");
+        if(!lua_istable(L,-1))
+        {
+            lua_pop(L,1);
+            lua_newtable(L);
+            lua_setglobal(L,"scheduleArgs");
+            lua_getglobal(L,"scheduleArgs");
+        }
+
+        lua_insert(L,1);
+
+        lua_pushinteger(L,common_lua->lastScheduleID);
+        lua_insert(L,-2);
+
+        lua_settable(L,1);
+        lua_pop(L,1);
     }
 
     schedule tmp;
-    tmp.functionName = funcName;
-    if(argName)
-        tmp.optionalString = argName;
-    else
-        tmp.optionalString = "";
-    tmp.timeToExecute = SDL_GetTicks() + ms;
+    tmp.functionName = std::string(functionName);
+    tmp.timeToExecute = SDL_GetTicks() + milliseconds;
     tmp.scheduleID = common_lua->lastScheduleID;
+    tmp.numLuaArgs = args - 2;
 
     if(common_lua->runningSchedules)
         common_lua->tmpSchedules.push_back(tmp);
@@ -62,12 +76,36 @@ static int scheduleLua(lua_State *L)
 
     lua_pushnumber(L,common_lua->lastScheduleID);
     common_lua->lastScheduleID++;
+
     return 1;
 }
 
 static int cancelLua(lua_State *L)
 {
+    scope("cancelLua");
+
     unsigned int id = lua_tointeger(L,-1);
+    lua_pop(L,1);
+
+    lua_getglobal(L,"scheduleArgs");
+    if(!lua_istable(L,-1))
+        error("Where did your scheduleArgs table go!");
+    else
+    {
+        lua_pushinteger(L,id);
+        lua_gettable(L,-2);
+
+        if(lua_isnil(L,-1))
+            lua_pop(L,1);
+        else
+        {
+            lua_pop(L,1);
+
+            lua_pushinteger(L,id);
+            lua_pushnil(L);
+            lua_settable(L,-3);
+        }
+    }
     lua_pop(L,1);
 
     if(common_lua->runningSchedules)
