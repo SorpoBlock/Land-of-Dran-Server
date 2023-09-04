@@ -122,6 +122,7 @@ void addEventNames(lua_State *L)
     common_lua->events.push_back(eventListener("projectileHit"));
     common_lua->events.push_back(eventListener("weaponFire"));
     common_lua->events.push_back(eventListener("dynamicDeath"));
+    common_lua->events.push_back(eventListener("raycastHit"));
 
     lua_register(L,"registerEventListener",registerEventListener);
     lua_register(L,"unregisterEventListener",unregisterEventListener);
@@ -922,6 +923,146 @@ void projectileHit(dynamic *hitDynamic,float x,float y,float z,std::string tag)
     }
 }
 
+void raycastHit(dynamic *player,item *gun,dynamic *hit,float x,float y,float z)
+{
+    eventListener *event = 0;
+    for(unsigned int a = 0; a<common_lua->events.size(); a++)
+    {
+        if(common_lua->events[a].eventName == "raycastHit")
+        {
+            event = &common_lua->events[a];
+            break;
+        }
+    }
+
+    if(!event)
+    {
+        error("raycastHit event dissapeared!");
+        return;
+    }
+
+    int top = lua_gettop(common_lua->luaState);
+
+    if(top > 0)
+        lua_pop(common_lua->luaState,top);
+
+    for(unsigned int a = 0; a<event->functionNames.size(); a++)
+    {
+        lua_getglobal(common_lua->luaState,event->functionNames[a].c_str());
+        if(!lua_isfunction(common_lua->luaState,1))
+        {
+            error("Function " + event->functionNames[a] + " was assigned to " + event->eventName + " but doesn't appear to be a valid function!");
+            lua_pop(common_lua->luaState,1);
+        }
+        else
+        {
+            pushDynamic(common_lua->luaState,player);
+            pushItem(common_lua->luaState,gun);
+            pushDynamic(common_lua->luaState,hit);
+            lua_pushnumber(common_lua->luaState,x);
+            lua_pushnumber(common_lua->luaState,y);
+            lua_pushnumber(common_lua->luaState,z);
+
+            if(lua_pcall(common_lua->luaState,6,0,0))
+            {
+                error("Error in lua call to event listener function " + event->functionNames[a] + " for event " + event->eventName);
+                if(lua_gettop(common_lua->luaState) > 0)
+                {
+                    const char *err = lua_tostring(common_lua->luaState,-1);
+                    if(!err)
+                        continue;
+                    std::string errorstr = err;
+
+                    int args = lua_gettop(common_lua->luaState);
+                    if(args > 0)
+                        lua_pop(common_lua->luaState,args);
+
+                    replaceAll(errorstr,"[","\\[");
+
+                    error("[colour='FFFF0000']" + errorstr);
+                }
+            }
+
+            int rets = lua_gettop(common_lua->luaState);
+            if(rets != 0)
+            {
+                error(event->eventName + " listener " + event->functionNames[a] + " was meant to return no arguments, returned " + std::to_string(rets) + ". Will ignore return values!");
+                lua_pop(common_lua->luaState,rets);
+            }
+        }
+    }
+}
+
+void raycastHit(dynamic *player,item *gun,brick *hit,float x,float y,float z)
+{
+    eventListener *event = 0;
+    for(unsigned int a = 0; a<common_lua->events.size(); a++)
+    {
+        if(common_lua->events[a].eventName == "raycastHit")
+        {
+            event = &common_lua->events[a];
+            break;
+        }
+    }
+
+    if(!event)
+    {
+        error("raycastHit event dissapeared!");
+        return;
+    }
+
+    int top = lua_gettop(common_lua->luaState);
+
+    if(top > 0)
+        lua_pop(common_lua->luaState,top);
+
+    for(unsigned int a = 0; a<event->functionNames.size(); a++)
+    {
+        lua_getglobal(common_lua->luaState,event->functionNames[a].c_str());
+        if(!lua_isfunction(common_lua->luaState,1))
+        {
+            error("Function " + event->functionNames[a] + " was assigned to " + event->eventName + " but doesn't appear to be a valid function!");
+            lua_pop(common_lua->luaState,1);
+        }
+        else
+        {
+            pushDynamic(common_lua->luaState,player);
+            pushItem(common_lua->luaState,gun);
+            pushBrick(common_lua->luaState,hit);
+            lua_pushnumber(common_lua->luaState,x);
+            lua_pushnumber(common_lua->luaState,y);
+            lua_pushnumber(common_lua->luaState,z);
+
+            if(lua_pcall(common_lua->luaState,6,0,0))
+            {
+                error("Error in lua call to event listener function " + event->functionNames[a] + " for event " + event->eventName);
+                if(lua_gettop(common_lua->luaState) > 0)
+                {
+                    const char *err = lua_tostring(common_lua->luaState,-1);
+                    if(!err)
+                        continue;
+                    std::string errorstr = err;
+
+                    int args = lua_gettop(common_lua->luaState);
+                    if(args > 0)
+                        lua_pop(common_lua->luaState,args);
+
+                    replaceAll(errorstr,"[","\\[");
+
+                    error("[colour='FFFF0000']" + errorstr);
+                }
+            }
+
+            int rets = lua_gettop(common_lua->luaState);
+            if(rets != 0)
+            {
+                error(event->eventName + " listener " + event->functionNames[a] + " was meant to return no arguments, returned " + std::to_string(rets) + ". Will ignore return values!");
+                lua_pop(common_lua->luaState,rets);
+            }
+        }
+    }
+}
+
 void weaponFire(dynamic *player,item *gun,float x,float y,float z,float dirX,float dirY,float dirZ)
 {
     if(gun->lastFireEvent + gun->fireCooldownMS > SDL_GetTicks())
@@ -929,10 +1070,57 @@ void weaponFire(dynamic *player,item *gun,float x,float y,float z,float dirX,flo
 
     gun->lastFireEvent = SDL_GetTicks();
 
+    btVector3 raystart = btVector3(x,y,z);
+    btVector3 rayend = raystart + btVector3(dirX,dirY,dirZ) * 50.0;
+
+    if(gun->performRaycast)
+    {
+        btCollisionWorld::AllHitsRayResultCallback res(raystart,rayend);
+        common_lua->physicsWorld->rayTest(raystart,rayend,res);
+
+        btRigidBody *closest = 0;
+        float closestDist = 999999;
+        btVector3 clickPos;
+
+        for(int a = 0; a<res.m_collisionObjects.size(); a++)
+        {
+            if(res.m_collisionObjects[a] == player)
+                continue;
+            if(res.m_collisionObjects[a] == gun)
+                continue;
+
+            if(closest == 0 || ((res.m_hitPointWorld[a] - raystart).length() < closestDist))
+            {
+                closestDist = (res.m_hitPointWorld[a] - raystart).length();
+                closest = (btRigidBody*)res.m_collisionObjects[a];
+                clickPos = res.m_hitPointWorld[a];
+            }
+        }
+
+        if(closest)
+        {
+            rayend = clickPos;
+            if(closest->getUserIndex() == bodyUserIndex_dynamic)
+                raycastHit(player,gun,(dynamic*)closest,clickPos.x(),clickPos.y(),clickPos.z());
+            else if(closest->getUserIndex() == bodyUserIndex_brick)
+                raycastHit(player,gun,(brick*)closest,clickPos.x(),clickPos.y(),clickPos.z());
+        }
+    }
+
     packet fireAnimPacket;
     fireAnimPacket.writeUInt(packetType_serverCommand,packetTypeBits);
     fireAnimPacket.writeString("itemFired");
     fireAnimPacket.writeUInt(gun->serverID,dynamicObjectIDBits);
+    if(gun->useBulletTrail)
+    {
+        fireAnimPacket.writeFloat(raystart.x());
+        fireAnimPacket.writeFloat(raystart.y());
+        fireAnimPacket.writeFloat(raystart.z());
+        fireAnimPacket.writeFloat(rayend.x());
+        fireAnimPacket.writeFloat(rayend.y());
+        fireAnimPacket.writeFloat(rayend.z());
+    }
+
     for(int a = 0; a<common_lua->users.size(); a++)
     {
         if(common_lua->users[a]->controlling && common_lua->users[a]->controlling == gun->heldBy)
@@ -1099,10 +1287,22 @@ void unifiedWorld::applyDamage(dynamic *d,float damage,std::string cause)
 
     if(d->isPlayer)
     {
+        oofCounter++;
+        if(oofCounter > 4)
+            oofCounter = 1;
+
+        btVector3 pos = d->getWorldTransform().getOrigin();
+
+        addEmitter(getEmitterType("ouchEmitter"),pos.x()+ d->type->eyeOffsetX,pos.y()+ d->type->eyeOffsetY,pos.z()+ d->type->eyeOffsetZ);
+
+        clientData *except = 0;
+
         for(int a = 0; a<users.size(); a++)
         {
             if(users[a]->controlling == d)
             {
+                except = users[a];
+
                 packet vignetteData;
                 vignetteData.writeUInt(packetType_serverCommand,packetTypeBits);
                 vignetteData.writeString("vignette");
@@ -1110,23 +1310,24 @@ void unifiedWorld::applyDamage(dynamic *d,float damage,std::string cause)
                 vignetteData.writeBit(false);
                 users[a]->netRef->send(&vignetteData,true);
 
-                oofCounter++;
-                if(oofCounter > 4)
-                    oofCounter = 1;
-
-                if(damage >= 10.0)
-                    playSound("oof" + std::to_string(oofCounter),0.65,1,users[a]);
-
-                btVector3 pos = d->getWorldTransform().getOrigin();
-
                 users[a]->camX = pos.x() + d->type->eyeOffsetX;
                 users[a]->camY = pos.y() + d->type->eyeOffsetY;
                 users[a]->camZ = pos.z() + d->type->eyeOffsetZ;
 
-                addEmitter(getEmitterType("ouchEmitter"),pos.x()+ d->type->eyeOffsetX,pos.y()+ d->type->eyeOffsetY,pos.z()+ d->type->eyeOffsetZ);
-
                 break;
             }
+        }
+
+        if(damage >= 10.0)
+        {
+            if(!except)
+                playSound("oof" + std::to_string(oofCounter),pos.x(),pos.y(),pos.z(),0.65,1.0);
+            else
+            {
+                playSoundExcept("oof" + std::to_string(oofCounter),pos.x(),pos.y(),pos.z(),except,0.65,1.0);
+                playSound("oof" + std::to_string(oofCounter),0.65,1,except);
+            }
+
         }
     }
 
@@ -1178,9 +1379,14 @@ void unifiedWorld::applyDamage(dynamic *d,float damage,std::string cause)
                     return;
                 }
             }
+            removeDynamic(d);
+            d=0;
         }
         else
+        {
             removeDynamic(d);
+            d=0;
+        }
     }
 }
 

@@ -450,6 +450,68 @@ static int setFireEmitter(lua_State *L)
     return 0;
 }
 
+static int setPerformRaycast(lua_State *L)
+{
+    scope("setPerformRaycast");
+
+    bool useBulletTrail = false;
+    float r=1.0,g=0.5,b=0.0,speed=1.0;
+
+    int args = lua_gettop(L);
+    if(!(args == 2 || args == 7))
+    {
+        error("Function expects 2 or 7 arguments!");
+        return 0;
+    }
+
+    if(args == 7)
+    {
+        speed = lua_tonumber(L,-1);
+        lua_pop(L,1);
+        b = lua_tonumber(L,-1);
+        lua_pop(L,1);
+        g = lua_tonumber(L,-1);
+        lua_pop(L,1);
+        r = lua_tonumber(L,-1);
+        lua_pop(L,1);
+        useBulletTrail = lua_toboolean(L,-1);
+        lua_pop(L,1);
+    }
+
+    bool raycast = lua_toboolean(L,-1);
+    lua_pop(L,1);
+
+    item *i = popItem(L);
+
+    if(args == 7)
+    {
+        i->useBulletTrail = useBulletTrail;
+        i->bulletTrailColor = btVector3(r,g,b);
+        i->bulletTrailSpeed = speed;
+    }
+
+    if(!i)
+    {
+        error("Invalid item!");
+        return 0;
+    }
+
+    packet updatePerformRaycast;
+    updatePerformRaycast.writeUInt(packetType_serverCommand,packetTypeBits);
+    updatePerformRaycast.writeString("setItemBulletTrail");
+    updatePerformRaycast.writeUInt(i->serverID,dynamicObjectIDBits);
+    updatePerformRaycast.writeBit(i->useBulletTrail);
+    updatePerformRaycast.writeFloat(i->bulletTrailColor.x());
+    updatePerformRaycast.writeFloat(i->bulletTrailColor.y());
+    updatePerformRaycast.writeFloat(i->bulletTrailColor.z());
+    updatePerformRaycast.writeFloat(i->bulletTrailSpeed);
+    common_lua->theServer->send(&updatePerformRaycast,true);
+
+    i->performRaycast = raycast;
+
+    return 0;
+}
+
 void registerItemFunctions(lua_State *L)
 {
     //Register metatable for dynamic
@@ -463,6 +525,7 @@ void registerItemFunctions(lua_State *L)
         {"getTypeName",getItemTypeName},
         {"setItemCooldown",setItemCooldown},
         {"setFireEmitter",setFireEmitter},
+        {"setPerformRaycast",setPerformRaycast},
         {NULL,NULL}};
     luaL_newmetatable(L,"itemMETATABLE");
     luaL_setfuncs(L,dynamicRegs,0);

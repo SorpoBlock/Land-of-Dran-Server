@@ -33,7 +33,7 @@ extern "C" {
     #include <lauxlib.h>
 }
 
-#define hardCodedNetworkVersion 10013
+#define hardCodedNetworkVersion 10014
 
 struct clientData
 {
@@ -268,7 +268,7 @@ struct unifiedWorld
     void setBrickName(brick *theBrick,std::string name);
     bool addBrick(brick *theBrick,bool stopOverlaps = false,bool colliding = true,bool networking = true);
     void loadBlocklandSave(std::string filePath,std::vector<brick*> &loadedBricks);
-    void loadLodSave(std::string filePath,std::vector<brick*> &loadedBricks);
+    void loadLodSave(std::string filePath,std::vector<brick*> &loadedBricks,int xOffset,int yOffset,int zOffset);
 
     void dropItem(dynamic *holder,int slot,bool tryUpdateInventory = true);
     void pickUpItem(dynamic *holder,item *i,int slot,clientData *source=0);

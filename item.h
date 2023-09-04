@@ -40,6 +40,7 @@ struct item : dynamic
         swinging = newSwinging;
     }
 
+    bool performRaycast = false;
     int nextFireAnim = -1;
     float nextFireAnimSpeed = 1.0;
     int nextFireSound = -1;
@@ -49,6 +50,9 @@ struct item : dynamic
     std::string nextFireEmitterMesh = "";
     int fireCooldownMS = 0;
     int lastFireEvent = 0;
+    bool useBulletTrail = true;
+    btVector3 bulletTrailColor = btVector3(1.0,0.5,0.0);
+    float bulletTrailSpeed = 1.0;
 
     bool hidden = false;
     bool swinging = false;

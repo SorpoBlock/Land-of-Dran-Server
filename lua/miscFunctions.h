@@ -561,6 +561,26 @@ static int loadLodSave(lua_State *L)
 {
     scope("loadLodSave");
 
+    int args = lua_gettop(L);
+
+    if(!(args == 1 || args == 4))
+    {
+        error("This function takes 1 or 4 arguments!");
+        return 0;
+    }
+
+    int z=0,y=0,x=0;
+
+    if(args == 4)
+    {
+        z = lua_tointeger(L,-1);
+        lua_pop(L,1);
+        y = lua_tointeger(L,-1);
+        lua_pop(L,1);
+        x = lua_tointeger(L,-1);
+        lua_pop(L,1);
+    }
+
     const char *fileName = lua_tostring(L,-1);
     lua_pop(L,1);
 
@@ -571,7 +591,7 @@ static int loadLodSave(lua_State *L)
     }
 
     std::vector<brick*> loadedBricks;
-    common_lua->loadLodSave(fileName,loadedBricks);
+    common_lua->loadLodSave(fileName,loadedBricks,x,y,z);
 
     packet skipCompileData;
     skipCompileData.writeUInt(packetType_serverCommand,packetTypeBits);
@@ -594,12 +614,20 @@ static int saveBuild(lua_State *L)
 {
     scope("saveBuild");
 
+    bool omitOwnership = false;
+
     int args = lua_gettop(L);
 
-    if(args != 1)
+    if(args < 1 || args > 2)
     {
-        error("This function must be called with 1 argument.");
+        error("This function must be called with 1 or 2 arguments.");
         return 0;
+    }
+
+    if(args == 2)
+    {
+        omitOwnership = lua_toboolean(L,-1);
+        lua_pop(L,1);
     }
 
     const char *filePath = lua_tostring(L,-1);
@@ -621,7 +649,7 @@ static int saveBuild(lua_State *L)
 
     float floatBuf = 0;
     unsigned char charBuf = 0;
-    unsigned int uIntBuf = landOfDranBuildMagic;
+    unsigned int uIntBuf = landOfDranBuildMagic+1;//next version
     saveFile.write((char*)&uIntBuf,sizeof(unsigned int));
 
     uIntBuf = common_lua->bricks.size();
@@ -689,6 +717,66 @@ static int saveBuild(lua_State *L)
         saveFile.write((char*)&charBuf,sizeof(unsigned char));
         charBuf = common_lua->bricks[a]->material;
         saveFile.write((char*)&charBuf,sizeof(unsigned char));
+
+        if(omitOwnership)
+        {
+            int intBuf = -1;
+            saveFile.write((char*)&intBuf,sizeof(int));
+        }
+        else
+        {
+            int intBuf = common_lua->bricks[a]->builtBy;
+            saveFile.write((char*)&intBuf,sizeof(int));
+        }
+
+        charBuf = common_lua->bricks[a]->name.length();
+        saveFile.write((char*)&charBuf,sizeof(unsigned char));
+        if(charBuf > 0)
+        {
+            std::string brickName = common_lua->bricks[a]->name;
+            if(brickName.length() > 255)
+                brickName = brickName.substr(0,255);
+            saveFile.write(brickName.c_str(),brickName.length());
+        }
+
+        //Flags
+        charBuf = 0;
+        if(common_lua->bricks[a]->isColliding())
+            charBuf += 1;
+        if(common_lua->bricks[a]->musicLoopId != -1)
+            charBuf += 2;
+        if(common_lua->bricks[a]->attachedLight)
+            charBuf += 4;
+        if(common_lua->bricks[a]->printID != -1)
+            charBuf += 8;
+        saveFile.write((char*)&charBuf,sizeof(unsigned char));
+
+        if(common_lua->bricks[a]->musicLoopId != -1)
+        {
+            uIntBuf = common_lua->bricks[a]->music;
+            saveFile.write((char*)&uIntBuf,sizeof(unsigned int));
+            floatBuf = common_lua->bricks[a]->musicPitch;
+            saveFile.write((char*)&floatBuf,sizeof(float));
+        }
+
+        if(common_lua->bricks[a]->attachedLight)
+        {
+            floatBuf = common_lua->bricks[a]->attachedLight->color.x();
+            saveFile.write((char*)&floatBuf,sizeof(float));
+            floatBuf = common_lua->bricks[a]->attachedLight->color.y();
+            saveFile.write((char*)&floatBuf,sizeof(float));
+            floatBuf = common_lua->bricks[a]->attachedLight->color.z();
+            saveFile.write((char*)&floatBuf,sizeof(float));
+        }
+
+        if(common_lua->bricks[a]->printID != -1)
+        {
+            charBuf = common_lua->bricks[a]->printMask;
+            saveFile.write((char*)&charBuf,sizeof(unsigned char));
+            charBuf = common_lua->bricks[a]->printName.length();
+            saveFile.write((char*)&charBuf,sizeof(unsigned char));
+            saveFile.write(common_lua->bricks[a]->printName.c_str(),common_lua->bricks[a]->printName.length());
+        }
     }
 
     //Only client saving uses this:
@@ -727,6 +815,66 @@ static int saveBuild(lua_State *L)
         saveFile.write((char*)&charBuf,sizeof(unsigned char));
         charBuf = common_lua->bricks[a]->material;
         saveFile.write((char*)&charBuf,sizeof(unsigned char));
+
+        if(omitOwnership)
+        {
+            int intBuf = -1;
+            saveFile.write((char*)&intBuf,sizeof(int));
+        }
+        else
+        {
+            int intBuf = common_lua->bricks[a]->builtBy;
+            saveFile.write((char*)&intBuf,sizeof(int));
+        }
+
+        charBuf = common_lua->bricks[a]->name.length();
+        saveFile.write((char*)&charBuf,sizeof(unsigned char));
+        if(charBuf > 0)
+        {
+            std::string brickName = common_lua->bricks[a]->name;
+            if(brickName.length() > 255)
+                brickName = brickName.substr(0,255);
+            saveFile.write(brickName.c_str(),brickName.length());
+        }
+
+        //Flags
+        charBuf = 0;
+        if(common_lua->bricks[a]->isColliding())
+            charBuf += 1;
+        if(common_lua->bricks[a]->musicLoopId != -1)
+            charBuf += 2;
+        if(common_lua->bricks[a]->attachedLight)
+            charBuf += 4;
+        if(common_lua->bricks[a]->printID != -1)
+            charBuf += 8;
+        saveFile.write((char*)&charBuf,sizeof(unsigned char));
+
+        if(common_lua->bricks[a]->musicLoopId != -1)
+        {
+            uIntBuf = common_lua->bricks[a]->music;
+            saveFile.write((char*)&uIntBuf,sizeof(unsigned int));
+            floatBuf = common_lua->bricks[a]->musicPitch;
+            saveFile.write((char*)&floatBuf,sizeof(float));
+        }
+
+        if(common_lua->bricks[a]->attachedLight)
+        {
+            floatBuf = common_lua->bricks[a]->attachedLight->color.x();
+            saveFile.write((char*)&floatBuf,sizeof(float));
+            floatBuf = common_lua->bricks[a]->attachedLight->color.y();
+            saveFile.write((char*)&floatBuf,sizeof(float));
+            floatBuf = common_lua->bricks[a]->attachedLight->color.z();
+            saveFile.write((char*)&floatBuf,sizeof(float));
+        }
+
+        if(common_lua->bricks[a]->printID != -1)
+        {
+            charBuf = common_lua->bricks[a]->printMask;
+            saveFile.write((char*)&charBuf,sizeof(unsigned char));
+            charBuf = common_lua->bricks[a]->printName.length();
+            saveFile.write((char*)&charBuf,sizeof(unsigned char));
+            saveFile.write(common_lua->bricks[a]->printName.c_str(),common_lua->bricks[a]->printName.length());
+        }
     }
 
     //Only client saving uses this:

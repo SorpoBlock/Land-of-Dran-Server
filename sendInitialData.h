@@ -149,40 +149,6 @@ void sendInitialDataSecondHalf(unifiedWorld *common,clientData *source,serverCli
         client->send(&data,true);
     }
 
-    /*for(unsigned int a = 0; a<maxMusicBricks; a++)
-    {
-        brick *musicBrick = common->musicBricks[a];
-        if(!musicBrick)
-            continue;
-
-        if(musicBrick->car)
-        {
-            packet data;
-            data.writeUInt(packetType_playSound,packetTypeBits);
-            data.writeUInt(musicBrick->music,10);
-            data.writeBit(true);
-            data.writeUInt(a,5);
-            data.writeFloat(musicBrick->musicPitch);
-            data.writeBit(true);
-            data.writeUInt(((brickCar*)musicBrick->car)->serverID,10);
-            client->send(&data,true);
-        }
-        else //music loop on brick
-        {
-            packet data;
-            data.writeUInt(packetType_playSound,packetTypeBits);
-            data.writeUInt(musicBrick->music,10);
-            data.writeBit(true);
-            data.writeUInt(a,5);
-            data.writeFloat(musicBrick->musicPitch);
-            data.writeBit(false);
-            data.writeFloat(musicBrick->getX());
-            data.writeFloat(musicBrick->getY());
-            data.writeFloat(musicBrick->getZ());
-            client->send(&data,true);
-        }
-    }*/
-
     for(unsigned int a = 0; a<common->dynamics.size(); a++)
     {
         if(!common->dynamics[a])
@@ -201,6 +167,72 @@ void sendInitialDataSecondHalf(unifiedWorld *common,clientData *source,serverCli
 
     for(unsigned int a = 0; a<common->lights.size(); a++)
         common->lights[a]->sendToClient(client);
+
+    for(unsigned int a = 0; a<common->items.size(); a++)
+    {
+        if(common->items[a]->nextFireAnim != -1)
+        {
+            packet updateAnimPacket;
+            updateAnimPacket.writeUInt(packetType_serverCommand,packetTypeBits);
+            updateAnimPacket.writeString("setItemFireAnim");
+            updateAnimPacket.writeUInt(common->items[a]->serverID,dynamicObjectIDBits);
+            updateAnimPacket.writeBit(true);
+            updateAnimPacket.writeUInt(common->items[a]->nextFireAnim,10);
+            updateAnimPacket.writeFloat(common->items[a]->nextFireAnimSpeed);
+            client->send(&updateAnimPacket,true);
+        }
+
+        if(common->items[a]->nextFireSound != -1)
+        {
+            packet updateSoundPacket;
+            updateSoundPacket.writeUInt(packetType_serverCommand,packetTypeBits);
+            updateSoundPacket.writeString("setItemFireSound");
+            updateSoundPacket.writeUInt(common->items[a]->serverID,dynamicObjectIDBits);
+            updateSoundPacket.writeBit(true);
+            updateSoundPacket.writeUInt(common->items[a]->nextFireSound,10);
+            updateSoundPacket.writeFloat(common->items[a]->nextFireSoundPitch);
+            updateSoundPacket.writeFloat(common->items[a]->nextFireSoundGain);
+            client->send(&updateSoundPacket,true);
+        }
+
+        if(common->items[a]->nextFireEmitter != -1)
+        {
+            packet updateFireEmitter;
+            updateFireEmitter.writeUInt(packetType_serverCommand,packetTypeBits);
+            updateFireEmitter.writeString("setItemFireEmitter");
+            updateFireEmitter.writeUInt(common->items[a]->serverID,dynamicObjectIDBits);
+            updateFireEmitter.writeBit(true);
+            updateFireEmitter.writeUInt(common->items[a]->nextFireEmitter,10);
+            updateFireEmitter.writeString(common->items[a]->nextFireEmitterMesh);
+            client->send(&updateFireEmitter,true);
+        }
+
+        if(common->items[a]->fireCooldownMS != 0)
+        {
+            packet updateSoundPacket;
+            updateSoundPacket.writeUInt(packetType_serverCommand,packetTypeBits);
+            updateSoundPacket.writeString("setItemCooldown");
+            updateSoundPacket.writeUInt(common->items[a]->serverID,dynamicObjectIDBits);
+            updateSoundPacket.writeUInt(common->items[a]->fireCooldownMS,16);
+            client->send(&updateSoundPacket,true);
+        }
+
+        if(common->items[a]->useBulletTrail)
+        {
+            packet updatePerformRaycast;
+            updatePerformRaycast.writeUInt(packetType_serverCommand,packetTypeBits);
+            updatePerformRaycast.writeString("setItemBulletTrail");
+            updatePerformRaycast.writeUInt(common->items[a]->serverID,dynamicObjectIDBits);
+            updatePerformRaycast.writeBit(common->items[a]->useBulletTrail);
+            updatePerformRaycast.writeFloat(common->items[a]->bulletTrailColor.x());
+            updatePerformRaycast.writeFloat(common->items[a]->bulletTrailColor.y());
+            updatePerformRaycast.writeFloat(common->items[a]->bulletTrailColor.z());
+            updatePerformRaycast.writeFloat(common->items[a]->bulletTrailSpeed);
+            client->send(&updatePerformRaycast,true);
+        }
+    }
 }
 
 #endif // SENDINITIALDATA_H_INCLUDED
+
+

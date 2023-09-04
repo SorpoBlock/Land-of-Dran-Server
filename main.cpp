@@ -164,8 +164,6 @@ int main(int argc, char *argv[])
         }
     }
 
-    silent = true;
-
     preferenceFile settingsFile;
     settingsFile.importFromFile("config.txt");
 
@@ -358,6 +356,9 @@ int main(int argc, char *argv[])
     registerLightFunctions(common.luaState);
     registerItemFunctions(common.luaState);
     addEventNames(common.luaState);
+
+    lua_newtable(common.luaState);
+    lua_setglobal(common.luaState,"scheduleArgs");
 
     info("Loading decals");
     common.loadDecals("add-ons/decals");
@@ -611,6 +612,30 @@ int main(int argc, char *argv[])
 
     unsigned int lastMasterListPost = 0;
     CURL *masterServerPoster = 0;
+
+    if(!silent)
+    {
+        if(masterServerPoster)
+        {
+            curl_easy_cleanup(masterServerPoster);
+            masterServerPoster = 0;
+        }
+
+        //info("Posting to master server...");
+        masterServerPoster = curl_easy_init();
+        curl_easy_setopt(masterServerPoster,CURLOPT_SSL_VERIFYHOST,0);
+        curl_easy_setopt(masterServerPoster,CURLOPT_SSL_VERIFYPEER,0);
+        //curl_easy_setopt(masterServerPoster,CURLOPT_WRITEDATA,source);
+        curl_easy_setopt(masterServerPoster,CURLOPT_WRITEFUNCTION,getHeartbeatResponse);
+        std::string url = "https://dran.land/heartbeat.php";
+        std::string args = "key=" + key + "&id=" + keyID + "&players=" + std::to_string(common.users.size()) + "&maxplayers=30&mature=" + (common.mature?"1":"0") + "&servername=" + common.serverName + "&bricks=" + std::to_string(common.bricks.size());
+        curl_easy_setopt(masterServerPoster,CURLOPT_URL,url.c_str());
+        curl_easy_setopt(masterServerPoster,CURLOPT_POSTFIELDSIZE,args.length());
+        curl_easy_setopt(masterServerPoster,CURLOPT_COPYPOSTFIELDS,args.c_str());
+        CURLMcode code = curl_multi_add_handle(common.curlHandle,masterServerPoster);
+        if(code != CURLM_OK)
+            error(std::string("Posting to master server resulted in error ") + curl_multi_strerror(code));
+    }
 
     //unsigned int msBetweenUpdates = 60;
     //bool everyOtherLoop = false;
@@ -1075,9 +1100,7 @@ int main(int argc, char *argv[])
                                 //our specific args table
 
                                 if(lua_isnil(common.luaState,-1))
-                                {
                                     lua_pop(common.luaState,2);
-                                }
                                 else
                                 {
                                     for(int g = (*sch).numLuaArgs-1; g>=0; g--)

@@ -228,6 +228,46 @@ static int setAngularVelocity(lua_State *L)
 static int setRotation(lua_State *L)
 {
     scope("setRotation");
+
+    int args = lua_gettop(L);
+
+    if(args == 4)
+    {
+        float roll = lua_tonumber(L,-1);
+        lua_pop(L,1);
+        float pitch = lua_tonumber(L,-1);
+        lua_pop(L,1);
+        float yaw = lua_tonumber(L,-1);
+        lua_pop(L,1);
+
+        dynamic *object = popDynamic(L);
+
+        if(!object)
+            return 0;
+
+        btTransform t = object->getWorldTransform();
+        t.setRotation(btQuaternion(yaw,pitch,roll));
+        object->setWorldTransform(t);
+
+        btVector3 lookDir = t * btVector3(0,0,-1);
+        object->lastCamX = lookDir.x();
+        object->lastCamZ = lookDir.z();
+
+        if(object->isPlayer)
+        {
+            for(int b = 0; b<common_lua->users.size(); b++)
+                if(common_lua->users[b]->controlling == object)
+                    common_lua->users[b]->forceTransformUpdate();
+        }
+
+        return 0;
+    }
+    else if(args != 5)
+    {
+        error("Function takes 4 or 5 arguments!");
+        return 0;
+    }
+
     float w = lua_tonumber(L,-1);
     lua_pop(L,1);
     float x = lua_tonumber(L,-1);
@@ -246,12 +286,12 @@ static int setRotation(lua_State *L)
     t.setRotation(btQuaternion(x,y,z,w));
     object->setWorldTransform(t);
 
+    btVector3 lookDir = t * btVector3(0,0,-1);
+    object->lastCamX = lookDir.x();
+    object->lastCamZ = lookDir.z();
+
     if(object->isPlayer)
     {
-        btVector3 lookDir = t * btVector3(0,0,1);
-        object->lastCamX = lookDir.x();
-        object->lastCamZ = lookDir.z();
-
         for(int b = 0; b<common_lua->users.size(); b++)
             if(common_lua->users[b]->controlling == object)
                 common_lua->users[b]->forceTransformUpdate();
@@ -945,6 +985,28 @@ static int fireHeldGun(lua_State *L)
     return 0;
 }
 
+static int setHealth(lua_State *L)
+{
+    scope("setHealth");
+    float health = lua_tonumber(L,-1);
+    lua_pop(L,1);
+
+    dynamic *object = popDynamic(L);
+
+    if(!object)
+        return 0;
+
+    object->health = health;
+
+    //Keep death code in one place with this one weird trick
+
+    if(object->health <= 0)
+        common_lua->applyDamage(object,1);
+
+    return 0;
+}
+
+
 void registerDynamicFunctions(lua_State *L)
 {
     //Register metatable for dynamic
@@ -978,6 +1040,7 @@ void registerDynamicFunctions(lua_State *L)
         {"setHeadPitch",setHeadPitch},
         {"fireHeldGun",fireHeldGun},
         {"getCamDir",getCamDir},
+        {"setHealth",setHealth},
         {NULL,NULL}};
     luaL_newmetatable(L,"dynamic");
     luaL_setfuncs(L,dynamicRegs,0);

@@ -2035,7 +2035,7 @@ void unifiedWorld::removeDynamic(dynamic *toRemove,bool dontSendPacket)
     }
 }
 
-void unifiedWorld::loadLodSave(std::string filePath,std::vector<brick*> &loadedBricks)
+void unifiedWorld::loadLodSave(std::string filePath,std::vector<brick*> &loadedBricks,int xOffset,int yOffset,int zOffset)
 {
     int start = SDL_GetTicks();
     std::ifstream bls(filePath.c_str(),std::ios::binary);
@@ -2052,8 +2052,10 @@ void unifiedWorld::loadLodSave(std::string filePath,std::vector<brick*> &loadedB
     float floatBuf = 0;
     unsigned char charBuf = 0;
 
+
     bls.read((char*)&uIntBuf,sizeof(unsigned int));
-    if(uIntBuf != landOfDranBuildMagic)
+    bool isNextVersion = uIntBuf == (landOfDranBuildMagic + 1);
+    if(uIntBuf != landOfDranBuildMagic && !isNextVersion)
     {
         error("Invalid Land of Dran binary save file or outdated version.");
         bls.close();
@@ -2136,15 +2138,78 @@ void unifiedWorld::loadLodSave(std::string filePath,std::vector<brick*> &loadedB
         bls.read((char*)&y,sizeof(float));
         bls.read((char*)&z,sizeof(float));
 
-        unsigned char width,height,length,flags;
+        unsigned char width,height,length,oldflags;
         bls.read((char*)&width,sizeof(unsigned char));
         bls.read((char*)&height,sizeof(unsigned char));
         bls.read((char*)&length,sizeof(unsigned char));
-        bls.read((char*)&flags,sizeof(unsigned char));
+        bls.read((char*)&oldflags,sizeof(unsigned char));
 
         unsigned char angleID,material;
         bls.read((char*)&angleID,sizeof(unsigned char));
         bls.read((char*)&material,sizeof(unsigned char));
+
+        bool isColliding = true;
+
+        bool hasMusic = false;
+        float musicPitch = 1.0;
+        unsigned int musicTrack = 0;
+
+        bool hasLight = false;
+        float lightR,lightG,lightB;
+
+        bool hasPrint = false;
+        int printMask = 0;
+        std::string printName = "";
+
+        int ownerID = -1;
+        std::string brickName = "";
+
+        if(isNextVersion)
+        {
+            bls.read((char*)&ownerID,sizeof(int));
+
+            bls.read((char*)&charBuf,sizeof(unsigned char));
+            if(charBuf > 0)
+            {
+                char *tempName = new char[charBuf+1];
+                tempName[charBuf] = 0;
+                bls.read(tempName,charBuf);
+                brickName = std::string(tempName);
+                delete tempName;
+            }
+
+            unsigned char flags;
+            bls.read((char*)&flags,sizeof(unsigned char));
+            isColliding = flags & 1;
+            hasMusic = flags & 2;
+            hasLight = flags & 4;
+            hasPrint = flags & 8;
+
+            if(hasMusic)
+            {
+                bls.read((char*)&musicTrack,sizeof(unsigned int));
+                bls.read((char*)&musicPitch,sizeof(float));
+            }
+
+            if(hasLight)
+            {
+                bls.read((char*)&lightR,sizeof(float));
+                bls.read((char*)&lightG,sizeof(float));
+                bls.read((char*)&lightB,sizeof(float));
+            }
+
+            if(hasPrint)
+            {
+                bls.read((char*)&printMask,sizeof(unsigned char));
+                bls.read((char*)&charBuf,sizeof(unsigned char));
+
+                char *tempName = new char[charBuf+1];
+                tempName[charBuf] = 0;
+                bls.read(tempName,charBuf);
+                printName = std::string(tempName);
+                delete tempName;
+            }
+        }
 
         if(width == 0 || height == 0 || length == 0)
         {
@@ -2177,6 +2242,10 @@ void unifiedWorld::loadLodSave(std::string filePath,std::vector<brick*> &loadedB
         tmp->posZ = floor(z);
         tmp->zHalfPosition = fabs(floor(z) - z) > 0.25;
 
+        tmp->posX += xOffset;
+        tmp->uPosY += yOffset;
+        tmp->posZ += zOffset;
+
         tmp->r = r;
         tmp->g = g;
         tmp->b = b;
@@ -2196,11 +2265,33 @@ void unifiedWorld::loadLodSave(std::string filePath,std::vector<brick*> &loadedB
         tmp->height = height;
         tmp->length = length;
 
-        tmp->printMask = flags;
+        //tmp->printMask = flags;
+
+        if(hasPrint)
+        {
+            for(unsigned int a = 0; a<brickTypes->printNames.size(); a++)
+                if(brickTypes->printNames[a] == printName)
+                    tmp->printID = a;
+            tmp->printMask = printMask;
+            tmp->printName = printName;
+        }
 
         loadedBricks.push_back(tmp);
-        addBrick(tmp,false,true,false);
+        addBrick(tmp,false,isColliding,false);
         brickCount++;
+
+        if(brickName.length() > 0)
+            setBrickName(tmp,brickName);
+        tmp->builtBy = ownerID;
+        if(hasLight)
+            addLight(btVector3(lightR,lightG,lightB),tmp);
+
+        if(hasMusic)
+        {
+            tmp->musicPitch = musicPitch;
+            tmp->music = musicTrack;
+            tmp->musicLoopId = startSoundLoop(musicTrack,tmp->getX(),tmp->getY(),tmp->getZ(),musicPitch);
+        }
 
         if(brickCount > toLoad)
         {
@@ -2226,15 +2317,78 @@ void unifiedWorld::loadLodSave(std::string filePath,std::vector<brick*> &loadedB
         bls.read((char*)&y,sizeof(float));
         bls.read((char*)&z,sizeof(float));
 
-        unsigned char width,height,length,flags;
+        unsigned char width,height,length,oldflags;
         bls.read((char*)&width,sizeof(unsigned char));
         bls.read((char*)&height,sizeof(unsigned char));
         bls.read((char*)&length,sizeof(unsigned char));
-        bls.read((char*)&flags,sizeof(unsigned char));
+        bls.read((char*)&oldflags,sizeof(unsigned char));
 
         unsigned char angleID,material;
         bls.read((char*)&angleID,sizeof(unsigned char));
         bls.read((char*)&material,sizeof(unsigned char));
+
+        bool isColliding = true;
+
+        bool hasMusic = false;
+        float musicPitch = 1.0;
+        unsigned int musicTrack = 0;
+
+        bool hasLight = false;
+        float lightR,lightG,lightB;
+
+        bool hasPrint = false;
+        int printMask = 0;
+        std::string printName = "";
+
+        int ownerID = -1;
+        std::string brickName = "";
+
+        if(isNextVersion)
+        {
+            bls.read((char*)&ownerID,sizeof(int));
+
+            bls.read((char*)&charBuf,sizeof(unsigned char));
+            if(charBuf > 0)
+            {
+                char *tempName = new char[charBuf+1];
+                tempName[charBuf] = 0;
+                bls.read(tempName,charBuf);
+                brickName = std::string(tempName);
+                delete tempName;
+            }
+
+            unsigned char flags;
+            bls.read((char*)&flags,sizeof(unsigned char));
+            isColliding = flags & 1;
+            hasMusic = flags & 2;
+            hasLight = flags & 4;
+            hasPrint = flags & 8;
+
+            if(hasMusic)
+            {
+                bls.read((char*)&musicTrack,sizeof(unsigned int));
+                bls.read((char*)&musicPitch,sizeof(float));
+            }
+
+            if(hasLight)
+            {
+                bls.read((char*)&lightR,sizeof(float));
+                bls.read((char*)&lightG,sizeof(float));
+                bls.read((char*)&lightB,sizeof(float));
+            }
+
+            if(hasPrint)
+            {
+                bls.read((char*)&printMask,sizeof(unsigned char));
+                bls.read((char*)&charBuf,sizeof(unsigned char));
+
+                char *tempName = new char[charBuf+1];
+                tempName[charBuf] = 0;
+                bls.read(tempName,charBuf);
+                printName = std::string(tempName);
+                delete tempName;
+            }
+        }
 
         if(width == 0 || height == 0 || length == 0)
         {
@@ -2267,6 +2421,10 @@ void unifiedWorld::loadLodSave(std::string filePath,std::vector<brick*> &loadedB
         tmp->posZ = floor(z);
         tmp->zHalfPosition = fabs(floor(z) - z) > 0.25;
 
+        tmp->posX += xOffset;
+        tmp->uPosY += yOffset;
+        tmp->posZ += zOffset;
+
         tmp->r = r;
         tmp->g = g;
         tmp->b = b;
@@ -2285,11 +2443,33 @@ void unifiedWorld::loadLodSave(std::string filePath,std::vector<brick*> &loadedB
         tmp->height = height;
         tmp->length = length;
 
-        tmp->printMask = flags;
+        //tmp->printMask = flags;
+
+        if(hasPrint)
+        {
+            for(unsigned int a = 0; a<brickTypes->printNames.size(); a++)
+                if(brickTypes->printNames[a] == printName)
+                    tmp->printID = a;
+            tmp->printMask = printMask;
+            tmp->printName = printName;
+        }
 
         loadedBricks.push_back(tmp);
-        addBrick(tmp,false,true,false);
+        addBrick(tmp,false,isColliding,false);
         brickCount++;
+
+        if(brickName.length() > 0)
+            setBrickName(tmp,brickName);
+        tmp->builtBy = ownerID;
+        if(hasLight)
+            addLight(btVector3(lightR,lightG,lightB),tmp);
+
+        if(hasMusic)
+        {
+            tmp->musicPitch = musicPitch;
+            tmp->music = musicTrack;
+            tmp->musicLoopId = startSoundLoop(musicTrack,tmp->getX(),tmp->getY(),tmp->getZ(),musicPitch);
+        }
 
         if(brickCount > toLoad)
         {
@@ -2320,6 +2500,69 @@ void unifiedWorld::loadLodSave(std::string filePath,std::vector<brick*> &loadedB
         unsigned char angleID,material;
         bls.read((char*)&angleID,sizeof(unsigned char));
         bls.read((char*)&material,sizeof(unsigned char));
+
+        bool isColliding = true;
+
+        bool hasMusic = false;
+        float musicPitch = 1.0;
+        unsigned int musicTrack = 0;
+
+        bool hasLight = false;
+        float lightR,lightG,lightB;
+
+        bool hasPrint = false;
+        int printMask = 0;
+        std::string printName = "";
+
+        int ownerID = -1;
+        std::string brickName = "";
+
+        if(isNextVersion)
+        {
+            bls.read((char*)&ownerID,sizeof(int));
+
+            bls.read((char*)&charBuf,sizeof(unsigned char));
+            if(charBuf > 0)
+            {
+                char *tempName = new char[charBuf+1];
+                tempName[charBuf] = 0;
+                bls.read(tempName,charBuf);
+                brickName = std::string(tempName);
+                delete tempName;
+            }
+
+            unsigned char flags;
+            bls.read((char*)&flags,sizeof(unsigned char));
+            isColliding = flags & 1;
+            hasMusic = flags & 2;
+            hasLight = flags & 4;
+            hasPrint = flags & 8;
+
+            if(hasMusic)
+            {
+                bls.read((char*)&musicTrack,sizeof(unsigned int));
+                bls.read((char*)&musicPitch,sizeof(float));
+            }
+
+            if(hasLight)
+            {
+                bls.read((char*)&lightR,sizeof(float));
+                bls.read((char*)&lightG,sizeof(float));
+                bls.read((char*)&lightB,sizeof(float));
+            }
+
+            if(hasPrint)
+            {
+                bls.read((char*)&printMask,sizeof(unsigned char));
+                bls.read((char*)&charBuf,sizeof(unsigned char));
+
+                char *tempName = new char[charBuf+1];
+                tempName[charBuf] = 0;
+                bls.read(tempName,charBuf);
+                printName = std::string(tempName);
+                delete tempName;
+            }
+        }
 
         if(saveTypeID >= saveToServerBrickTypeIDs.size())
         {
@@ -2358,6 +2601,10 @@ void unifiedWorld::loadLodSave(std::string filePath,std::vector<brick*> &loadedB
         tmp->posZ = floor(z);
         tmp->zHalfPosition = fabs(floor(z) - z) > 0.25;
 
+        tmp->posX += xOffset;
+        tmp->uPosY += yOffset;
+        tmp->posZ += zOffset;
+
         tmp->r = r;
         tmp->g = g;
         tmp->b = b;
@@ -2377,9 +2624,31 @@ void unifiedWorld::loadLodSave(std::string filePath,std::vector<brick*> &loadedB
         tmp->height = brickTypes->brickTypes[typeID]->height;
         tmp->length = brickTypes->brickTypes[typeID]->length;
 
+        if(hasPrint)
+        {
+            for(unsigned int a = 0; a<brickTypes->printNames.size(); a++)
+                if(brickTypes->printNames[a] == printName)
+                    tmp->printID = a;
+            tmp->printMask = printMask;
+            tmp->printName = printName;
+        }
+
         loadedBricks.push_back(tmp);
-        addBrick(tmp,false,true,false);
+        addBrick(tmp,false,isColliding,false);
         brickCount++;
+
+        if(brickName.length() > 0)
+            setBrickName(tmp,brickName);
+        tmp->builtBy = ownerID;
+        if(hasLight)
+            addLight(btVector3(lightR,lightG,lightB),tmp);
+
+        if(hasMusic)
+        {
+            tmp->musicPitch = musicPitch;
+            tmp->music = musicTrack;
+            tmp->musicLoopId = startSoundLoop(musicTrack,tmp->getX(),tmp->getY(),tmp->getZ(),musicPitch);
+        }
 
         if(brickCount > toLoad)
         {
@@ -2387,7 +2656,6 @@ void unifiedWorld::loadLodSave(std::string filePath,std::vector<brick*> &loadedB
             break;
         }
     }
-
 
     bls.read((char*)&uIntBuf,sizeof(unsigned int));
     int transparentSpecialBricks = uIntBuf;
@@ -2411,6 +2679,69 @@ void unifiedWorld::loadLodSave(std::string filePath,std::vector<brick*> &loadedB
         unsigned char angleID,material;
         bls.read((char*)&angleID,sizeof(unsigned char));
         bls.read((char*)&material,sizeof(unsigned char));
+
+        bool isColliding = true;
+
+        bool hasMusic = false;
+        float musicPitch = 1.0;
+        unsigned int musicTrack = 0;
+
+        bool hasLight = false;
+        float lightR,lightG,lightB;
+
+        bool hasPrint = false;
+        int printMask = 0;
+        std::string printName = "";
+
+        int ownerID = -1;
+        std::string brickName = "";
+
+        if(isNextVersion)
+        {
+            bls.read((char*)&ownerID,sizeof(int));
+
+            bls.read((char*)&charBuf,sizeof(unsigned char));
+            if(charBuf > 0)
+            {
+                char *tempName = new char[charBuf+1];
+                tempName[charBuf] = 0;
+                bls.read(tempName,charBuf);
+                brickName = std::string(tempName);
+                delete tempName;
+            }
+
+            unsigned char flags;
+            bls.read((char*)&flags,sizeof(unsigned char));
+            isColliding = flags & 1;
+            hasMusic = flags & 2;
+            hasLight = flags & 4;
+            hasPrint = flags & 8;
+
+            if(hasMusic)
+            {
+                bls.read((char*)&musicTrack,sizeof(unsigned int));
+                bls.read((char*)&musicPitch,sizeof(float));
+            }
+
+            if(hasLight)
+            {
+                bls.read((char*)&lightR,sizeof(float));
+                bls.read((char*)&lightG,sizeof(float));
+                bls.read((char*)&lightB,sizeof(float));
+            }
+
+            if(hasPrint)
+            {
+                bls.read((char*)&printMask,sizeof(unsigned char));
+                bls.read((char*)&charBuf,sizeof(unsigned char));
+
+                char *tempName = new char[charBuf+1];
+                tempName[charBuf] = 0;
+                bls.read(tempName,charBuf);
+                printName = std::string(tempName);
+                delete tempName;
+            }
+        }
 
         if(saveTypeID >= saveToServerBrickTypeIDs.size())
         {
@@ -2449,6 +2780,10 @@ void unifiedWorld::loadLodSave(std::string filePath,std::vector<brick*> &loadedB
         tmp->posZ = floor(z);
         tmp->zHalfPosition = fabs(floor(z) - z) > 0.25;
 
+        tmp->posX += xOffset;
+        tmp->uPosY += yOffset;
+        tmp->posZ += zOffset;
+
         tmp->r = r;
         tmp->g = g;
         tmp->b = b;
@@ -2468,9 +2803,31 @@ void unifiedWorld::loadLodSave(std::string filePath,std::vector<brick*> &loadedB
         tmp->height = brickTypes->brickTypes[typeID]->height;
         tmp->length = brickTypes->brickTypes[typeID]->length;
 
+        if(hasPrint)
+        {
+            for(unsigned int a = 0; a<brickTypes->printNames.size(); a++)
+                if(brickTypes->printNames[a] == printName)
+                    tmp->printID = a;
+            tmp->printMask = printMask;
+            tmp->printName = printName;
+        }
+
         loadedBricks.push_back(tmp);
-        addBrick(tmp,false,true,false);
+        addBrick(tmp,false,isColliding,false);
         brickCount++;
+
+        if(brickName.length() > 0)
+            setBrickName(tmp,brickName);
+        tmp->builtBy = ownerID;
+        if(hasLight)
+            addLight(btVector3(lightR,lightG,lightB),tmp);
+
+        if(hasMusic)
+        {
+            tmp->musicPitch = musicPitch;
+            tmp->music = musicTrack;
+            tmp->musicLoopId = startSoundLoop(musicTrack,tmp->getX(),tmp->getY(),tmp->getZ(),musicPitch);
+        }
 
         if(brickCount > toLoad)
         {

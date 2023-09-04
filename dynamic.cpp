@@ -229,10 +229,6 @@ dynamicType::dynamicType(std::string filePath,int id,btVector3 scale)
     aabbMax = btVector3(aabbMaxAI.x,aabbMaxAI.y,aabbMaxAI.z);
     aabbMin = btVector3(aabbMinAI.x,aabbMinAI.y,aabbMinAI.z);
 
-    std::cout<<filePath<<"\n";
-    std::cout<<"aabbMin: "; sayVec(aabbMin);
-    std::cout<<"aabbMax: "; sayVec(aabbMax);
-
     btVector3 size = aabbMax-aabbMin;
     size /= 2.0;
     size *= scale;
