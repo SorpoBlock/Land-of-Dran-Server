@@ -344,6 +344,10 @@ void unifiedWorld::removeEmitter(emitter *e)
 
 emitter *unifiedWorld::addEmitter(emitterType *type,float x,float y,float z,bool dontSend)
 {
+    if(!type)
+        return 0;
+    scope("unifiedWorld::addEmitter");
+
     emitter *tmp = new emitter;
     tmp->creationTime = SDL_GetTicks();
     tmp->position = btVector3(x,y,z);
@@ -960,7 +964,6 @@ void clientData::sendCameraDetails()
         data.writeBit(false);
     netRef->send(&data,true);
 }
-
 
 glm::mat4 makeRotateMatrix(glm::vec3 axis, float angle)
 {

@@ -134,6 +134,8 @@ bool silent = false;
 
 int main(int argc, char *argv[])
 {
+    //silent = true;
+
     int maxPlayersThisTime = 0;
 
     common_lua = &common;
@@ -416,7 +418,7 @@ int main(int argc, char *argv[])
     common.dynamicTypes.push_back(gun);
 
     itemType *gunItem = new itemType(gun,3);
-    gunItem->uiName = "Gun";
+    gunItem->uiName = "Launcher";
     gunItem->useDefaultSwing = false;
     gunItem->handOffsetX = 1.8;
     gunItem->handOffsetY = 3.3;

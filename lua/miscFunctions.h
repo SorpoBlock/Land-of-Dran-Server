@@ -241,90 +241,6 @@ static int playSoundClient(lua_State *L)
     }
 }
 
-void saveBricks(std::ofstream &save,std::vector<brick*> &theVector)
-{
-    error("no more saving :(");
-    return;
-
-    unsigned int numBricks = theVector.size();
-    save.write((const char*)&numBricks,sizeof(unsigned int));
-
-    for(unsigned int a = 0; a<numBricks; a++)
-    {
-        brick *b = theVector[a];
-        if(!b)
-            continue;
-
-        unsigned char red = b->r*255;
-        save.write((const char*)&red,sizeof(unsigned char));
-        unsigned char green = b->g*255;
-        save.write((const char*)&green,sizeof(unsigned char));
-        unsigned char blue = b->b*255;
-        save.write((const char*)&blue,sizeof(unsigned char));
-        unsigned char alpha = b->a*255;
-        save.write((const char*)&alpha,sizeof(unsigned char));
-
-        /*float x = b->x;
-        save.write((const char*)&x,sizeof(float));
-        float y = b->y;
-        save.write((const char*)&y,sizeof(float));
-        float z = b->z;
-        save.write((const char*)&z,sizeof(float));*/
-
-        unsigned int material = b->material;
-        save.write((const char*)&material,sizeof(unsigned int));
-
-        unsigned char angleID = b->angleID;
-        save.write((const char*)&angleID,sizeof(unsigned char));
-
-        unsigned char isSpecial = b->isSpecial ? 1 : 0;
-        save.write((const char*)&isSpecial,sizeof(unsigned char));
-
-        if(b->isSpecial)
-        {
-            unsigned short type = b->typeID;
-            save.write((const char*)&type,sizeof(unsigned short));
-        }
-        else
-        {
-            unsigned char width = b->width;
-            save.write((const char*)&width,sizeof(unsigned char));
-            unsigned char height = b->height;
-            save.write((const char*)&height,sizeof(unsigned char));
-            unsigned char length = b->length;
-            save.write((const char*)&length,sizeof(unsigned char));
-        }
-    }
-}
-
-/*static int saveBuildLod(lua_State *L)
-{
-    scope("saveBuildLod");
-
-    const char *path = lua_tostring(L,1);
-    lua_pop(L,1);
-
-    if(!path)
-    {
-        error("No file path.");
-        return 0;
-    }
-
-    std::ofstream save(path,std::ios::binary);
-    if(!save.is_open())
-    {
-        error("Could not open " + std::string(path));
-        return 0;
-    }
-
-    saveBricks(save,common_lua->bricks);
-    info(std::to_string(common_lua->bricks.size()) + " bricks saved to " + std::string(path));
-
-    save.close();
-
-    return 0;
-}*/
-
 static int clearAllCars(lua_State *L)
 {
     while(common_lua->brickCars.size() > 0)
@@ -364,6 +280,9 @@ static int printNetIDs(lua_State *L)
     info("Brick Car ID: " + std::to_string(common_lua->lastBuiltVehicleID));
     info("Snapshot ID: " + std::to_string(common_lua->lastSnapshotID));
     info("Schedule ID: " + std::to_string(common_lua->lastScheduleID));
+    info("Emitter ID: " + std::to_string(common_lua->lastEmitterID));
+    info("Light ID: " + std::to_string(common_lua->lastLightID));
+    info("Packet ID: " + std::to_string(common_lua->theServer->highestPacketID));
 
     return 0;
 }
@@ -1065,7 +984,6 @@ void bindMiscFuncs(lua_State *L)
 {
     lua_register(L,"echo",LUAecho);
     lua_register(L,"relWalkSpeed",relWalkSpeed);
-    //lua_register(L,"saveBuildLod",saveBuildLod);
     lua_register(L,"playSound",playSound);
     lua_register(L,"playSoundClient",playSoundClient);
     lua_register(L,"clearAllCars",clearAllCars);

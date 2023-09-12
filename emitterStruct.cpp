@@ -8,6 +8,7 @@ void emitter::sendToClient(serverClientHandle *netRef)
         return;
     }
 
+    //info("Sending emitter with ID "+std::to_string(serverID)+" and type "+type->dbname+" to client");
     packet data;
     data.writeUInt(packetType_emitterAddRemove,packetTypeBits);
     data.writeBit(true); //adding one, not removing

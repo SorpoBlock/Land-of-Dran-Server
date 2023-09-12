@@ -979,6 +979,12 @@ static int fireHeldGun(lua_State *L)
     if(object->lastHeldSlot == -1)
         return 0;
 
+    if(!object->holding[object->lastHeldSlot])
+    {
+        error("Dynamic was not holding item!");
+        return 0;
+    }
+
     btVector3 firePos = object->getWorldTransform().getOrigin() + btVector3(object->type->eyeOffsetX,object->type->eyeOffsetY,object->type->eyeOffsetZ);
     weaponFire(object,object->holding[object->lastHeldSlot],firePos.x(),firePos.y(),firePos.z(),object->lastCamX,object->lastCamY,object->lastCamZ);
 

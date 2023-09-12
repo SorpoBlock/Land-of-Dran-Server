@@ -418,7 +418,10 @@ static int addEmitter(lua_State *L)
 
         emitter *tmp = common_lua->addEmitter(theType);
 
-        pushEmitter(L,tmp);
+        if(!tmp)
+            lua_pushnil(L);
+        else
+            pushEmitter(L,tmp);
         return 1;
     }
     else if(args == 4)
@@ -459,7 +462,10 @@ static int addEmitter(lua_State *L)
 
         emitter *tmp = common_lua->addEmitter(theType,x,y,z);
 
-        pushEmitter(L,tmp);
+        if(!tmp)
+            lua_pushnil(L);
+        else
+            pushEmitter(L,tmp);
         return 1;
     }
     else

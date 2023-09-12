@@ -1285,6 +1285,8 @@ void unifiedWorld::applyDamage(dynamic *d,float damage,std::string cause)
     if(damage < 0)
         return;
 
+    scope("unifiedWorld::applyDamage");
+
     if(d->isPlayer)
     {
         oofCounter++;
