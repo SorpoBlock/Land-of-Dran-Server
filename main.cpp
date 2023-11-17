@@ -230,6 +230,14 @@ int main(int argc, char *argv[])
     if(common.luaPassword == " " || common.luaPassword == "changeme" || common.luaPassword.length() < 1)
         common.useLuaPassword = false;
 
+    unsigned char hash[32];
+    br_sha256_context shaContext;
+    br_sha256_init(&shaContext);
+    br_sha256_update(&shaContext,common.luaPassword.c_str(),common.luaPassword.length());
+    br_sha256_out(&shaContext,hash);
+    std::string hexStr = GetHexRepresentation(hash,32);
+    common.luaPassword = hexStr;
+
     settingsFile.exportToFile("config.txt");
 
     if(!silent)

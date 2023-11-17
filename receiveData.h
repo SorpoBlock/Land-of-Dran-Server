@@ -1029,6 +1029,13 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                 return;
             }
 
+            std::string pass = data->readString();
+            if(pass != common->luaPassword)
+            {
+                error("Client failed to send eval password with code to be eval'd");
+                return;
+            }
+
             std::string code = data->readString();
             std::string codeToEcho = code;
             replaceAll(codeToEcho,"[","\\[");
