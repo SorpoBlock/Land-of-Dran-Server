@@ -174,6 +174,41 @@ int main(int argc, char *argv[])
     settingsFile.addBoolPreference("USEEVALPASSWORD",false);
     settingsFile.addStringPreference("EVALPASSWORD","changeme");
 
+    std::ifstream nonowords("assets/nonowords.txt");
+    if(nonowords.is_open())
+    {
+        std::string line = "";
+
+        while(!nonowords.eof())
+        {
+            getline(nonowords,line);
+
+            if(line.length() < 2)
+                continue;
+
+            if(line.find("\t") != std::string::npos)
+            {
+                int tabPos = line.find("\t");
+                std::string word = line.substr(0,tabPos);
+                std::string replacement = line.substr(tabPos+1,line.length() - (tabPos+1));
+                if(word.length() < 1)
+                    continue;
+
+                common.badWords.push_back(word);
+                common.replacementWords.push_back(replacement);
+            }
+            else
+            {
+                common.badWords.push_back(line);
+                common.replacementWords.push_back("****");
+            }
+        }
+
+        nonowords.close();
+    }
+    else
+        error("No assets/nonowords.txt found!");
+
     common.mature = settingsFile.getPreference("MATURE")->toBool();
     std::string tmpName = settingsFile.getPreference("SERVERNAME")->toString();
     common.serverName = "";

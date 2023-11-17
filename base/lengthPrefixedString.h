@@ -18,9 +18,6 @@ void replaceAll(std::string& source, const std::string& from, const std::string&
 void split(const std::string &s,std::vector<std::string> &elems);
 std::string lowercase(std::string in);
 
-bool hasNonoWord(std::string in);
-std::string replaceNonoWords(std::string in);
-
 namespace syj
 {
     typedef class lengthPrefixedString

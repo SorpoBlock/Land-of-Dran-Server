@@ -52,59 +52,6 @@ std::string lowercase(std::string in)
     return ret;
 }
 
-bool hasNonoWord(std::string in)
-{
-    std::string lower = lowercase(in);
-    if(lower.find("nigger") != std::string::npos)
-        return true;
-    if(lower.find("kike") != std::string::npos)
-        return true;
-    if(lower.find("faggot") != std::string::npos)
-        return true;
-    if(lower.find("gook") != std::string::npos)
-        return true;
-    if(lower.find("fag ") != std::string::npos)
-        return true;
-    if(lower.find("troon") != std::string::npos)
-        return true;
-    if(lower.find("tranny") != std::string::npos)
-        return true;
-    if(lower.find("1488") != std::string::npos)
-        return true;
-    if(lower.find("nazi") != std::string::npos)
-        return true;
-    if(lower.find("hitler") != std::string::npos)
-        return true;
-    if(lower.find("mooncricket") != std::string::npos)
-        return true;
-    if(lower.find(" coon ") != std::string::npos)
-        return true;
-    if(lower.find(" rapist") != std::string::npos)
-        return true;
-    if(lower.find(" rape") != std::string::npos)
-        return true;
-    return false;
-}
-
-std::string replaceNonoWords(std::string in)
-{
-    std::string lower = lowercase(in);
-    replaceAll(lower,"nigger","roodypoo");
-    replaceAll(lower,"faggot","candyass");
-    replaceAll(lower,"fag ","candyass ");
-    replaceAll(lower,"troon","odd fellow");
-    replaceAll(lower,"tranny","weirdo");
-    replaceAll(lower,"gook","tokyo");
-    replaceAll(lower,"1488","1453");
-    replaceAll(lower,"nazi","larper");
-    replaceAll(lower,"hitler","makhnov");
-    replaceAll(lower,"mooncricket","day beetle");
-    replaceAll(lower," coon "," poodyroo ");
-    replaceAll(lower," rapist"," lover");
-    replaceAll(lower," rape"," love");
-    return lower;
-}
-
 namespace syj
 {
     //Convert a regular string to an LPS

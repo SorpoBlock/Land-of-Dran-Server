@@ -152,6 +152,28 @@ struct unifiedWorld
     std::string serverName = "My Cool Server";
     CURLM *curlHandle = 0;
 
+    std::vector<std::string> badWords;
+    std::vector<std::string> replacementWords;
+
+    bool hasNonoWord(std::string in)
+    {
+        std::string lower = lowercase(in);
+        for(int a = 0; a<badWords.size(); a++)
+        {
+            if(lower.find(badWords[a]) != std::string::npos)
+                return true;
+        }
+        return false;
+    }
+
+    std::string replaceNonoWords(std::string in)
+    {
+        std::string lower = lowercase(in);
+        for(int a = 0; a<badWords.size(); a++)
+            replaceAll(lower,badWords[a],replacementWords[a]);
+        return lower;
+    }
+
     float waterLevel = 15.0;
 
     std::vector<light*> lights;

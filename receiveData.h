@@ -210,9 +210,9 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
             if(cancelled)
                 return;
 
-            if(hasNonoWord(chat))
+            if(common->hasNonoWord(chat))
             {
-                chat = replaceNonoWords(chat);
+                chat = common->replaceNonoWords(chat);
                 source->message("[colour='FFFF0000']No-no word detected.","error");
             }
 
@@ -1676,8 +1676,8 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                 float green = data->readFloat();
                 float blue = data->readFloat();
 
-                if(hasNonoWord(name))
-                    name = replaceNonoWords(name);
+                if(common->hasNonoWord(name))
+                    name = common->replaceNonoWords(name);
 
                 bool validName = true;
                 if(name.length() < 1)
