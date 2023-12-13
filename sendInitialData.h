@@ -6,6 +6,8 @@
 //Sending brick types, dynamic types, environment data...
 void sendInitalDataFirstHalf(unifiedWorld *common,clientData *source,serverClientHandle *client)
 {
+    common->sendEnvironmentToClient(source);
+
     for(unsigned int a = 0; a<common->users.size(); a++)
     {
         packet data;

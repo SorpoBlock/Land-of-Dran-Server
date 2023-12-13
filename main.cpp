@@ -371,6 +371,8 @@ int main(int argc, char *argv[])
     common.softBodyWorldInfo.m_gravity = gravity;
     common.softBodyWorldInfo.m_sparsesdf.Initialize();
 
+    common.cycle.loadFromFile();
+
     btCollisionShape *plane = new btStaticPlaneShape(btVector3(0,1,0),0);
     btDefaultMotionState* planeState = new btDefaultMotionState();
     btRigidBody::btRigidBodyConstructionInfo planeCon(0,planeState,plane);

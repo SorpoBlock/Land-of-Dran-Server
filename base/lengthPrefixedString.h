@@ -77,6 +77,9 @@ namespace syj
         //Conversion from char array
         lengthPrefixedString(const char *source);
 
+        //Conversion from unsigned char array
+        lengthPrefixedString(const unsigned char *source);
+
         //Copy constructor, allocate a new identical copy
         lengthPrefixedString(const lengthPrefixedString &toCopy);
 

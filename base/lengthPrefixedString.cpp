@@ -197,6 +197,20 @@ namespace syj
         memcpy(data+(len>63 ? 2 : 1),source,len);
     }
 
+    //Conversion from char array
+    lengthPrefixedString::lengthPrefixedString(const unsigned char *source)
+    {
+        //Get length of char*
+        unsigned int len = 0;
+        while(source[len])len++;
+
+        //Allocate space
+        data = 0;
+        clear(len);
+
+        memcpy(data+(len>63 ? 2 : 1),source,len);
+    }
+
     //Assignment from char array
     lengthPrefixedString &lengthPrefixedString::operator=(const char *source)
     {

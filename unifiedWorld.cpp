@@ -1,5 +1,53 @@
 #include "code/unifiedWorld.h"
 
+void unifiedWorld::sendEnvironmentToClient(clientData *client)
+{
+    packet data;
+    data.writeUInt(packetType_serverCommand,packetTypeBits);
+    data.writeString("environment");
+    data.writeBit(!cycle.useDNC);
+    if(!cycle.useDNC)
+    {
+        data.writeString(cycle.skyBoxPath);
+        data.writeString(cycle.radiancePath);
+        data.writeString(cycle.irradiancePath);
+        data.writeFloat(sunDirection.x);
+        data.writeFloat(sunDirection.y);
+        data.writeFloat(sunDirection.z);
+    }
+    else
+    {
+        /*unsigned char *asdf = new unsigned char[sizeof(dayNightCycle)];
+        memcpy(asdf,&cycle,sizeof(dayNightCycle));
+        data.writeString(asdf);
+        for(int a = 0; a<sizeof(dayNightCycle); a++)
+            std::cout<<(int)asdf[a]<<"-"<<(int)data.data[a]<<"\n";
+        delete asdf;*/
+        data.writeFloat(cycle.dawnStart);
+        data.writeFloat(cycle.dawnEnd);
+        data.writeFloat(cycle.duskStart);
+        data.writeFloat(cycle.duskEnd);
+        data.writeFloat(cycle.secondsInDay);
+
+        for(int a = 0; a<4; a++)
+        {
+            data.writeFloat(cycle.dncSkyColors[a].r);
+            data.writeFloat(cycle.dncSkyColors[a].g);
+            data.writeFloat(cycle.dncSkyColors[a].b);
+
+            data.writeFloat(cycle.dncFogColors[a].r);
+            data.writeFloat(cycle.dncFogColors[a].g);
+            data.writeFloat(cycle.dncFogColors[a].b);
+
+            data.writeFloat(cycle.dncSunColors[a].r);
+            data.writeFloat(cycle.dncSunColors[a].g);
+            data.writeFloat(cycle.dncSunColors[a].b);
+            data.writeFloat(cycle.dncSunColors[a].a);
+        }
+    }
+    client->netRef->send(&data,true);
+}
+
 void clientData::forceTransformUpdate()
 {
     if(!controlling)

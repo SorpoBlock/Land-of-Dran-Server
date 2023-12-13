@@ -145,8 +145,167 @@ struct eventListener
     eventListener(std::string name) : eventName(name) {}
 };
 
+struct dayNightCycle
+{
+    //The following are times, -1 = midnight, 1 = also midnight:
+    double dawnStart = -0.8;
+    double dawnEnd = -0.4;
+    double duskStart = 0.4;
+    double duskEnd = 0.8;
+    double secondsInDay = 1000;
+
+    //There are 4 colors to interpolate between for night, dawn, day, and dusk
+    //I'd use an enum, but really we only use them in their interpolated form so why bother
+    glm::vec3 dncSkyColors[4];
+    glm::vec3 dncFogColors[4];
+    glm::vec4 dncSunColors[4];
+
+    bool useDNC = true;
+    std::string skyBoxPath = "road/main.hdr";
+    std::string radiancePath = "road/mainRad.hdr";
+    std::string irradiancePath = "road/mainIrr.hdr";
+
+    //time = 0.0;
+    //+/-1 = midnight
+    //-0.5 = dawn
+    //0 = noon
+    //0.5 = dusk
+    //Actually it's like 0.6 is dusk and -0.6 is dawn for the given lat and decl
+
+    dayNightCycle()
+    {
+        dncSunColors[0]        = glm::vec4(0.06,0.06,0.1,0);
+        dncFogColors[0]        = glm::vec3(0.06,0.06,0.1);
+        dncSkyColors[0]        = glm::vec3(1.0,1.0,1.0);
+
+        dncSunColors[1]        = glm::vec4(235,116,26,255) / glm::vec4(256,256,256,255);
+        dncFogColors[1]        = glm::vec3(21.0/255.0,26.0/255.0,29.0/255.0);
+        dncSkyColors[1]        = glm::vec3(1.0  ,0.77 ,0.541);
+
+        dncSunColors[2]        = glm::vec4(0.7,0.6,0.5,1.0/30.0) * glm::vec4(30.0);
+        dncFogColors[2]        = glm::vec3(109.0/255.0,130.0/255.0,132.0/255.0);
+        dncSkyColors[2]        = glm::vec3(1.0,1.0,1.0);
+
+        dncSunColors[3]        = (glm::vec4(235,116,26,255) / glm::vec4(256,256,256,255)) * glm::vec4(1.2,1.2,1.2,1.0);
+        dncFogColors[3]        = glm::vec3(74.0/255.0  ,71.0/255.0 ,56.0/255.0);
+        dncSkyColors[3]        = glm::vec3(1.0  ,0.77 ,0.541);
+    }
+
+    enum dayNightCycleVar
+    {
+        none,useibl,dwS,dwE,dkS,dkE,secsDay,skyCol,fogCol,sunCol,skyBox,rad,irr
+    };
+
+    bool strToBool(std::string in)
+    {
+        if(in == "yes")
+            return true;
+        if(in == "true")
+            return true;
+        if(in == "1")
+            return true;
+        if(in == "t")
+            return true;
+        return false;
+    }
+
+    void loadFromFile()
+    {
+        dayNightCycleVar next = none;
+
+        int idx = 0;
+
+        std::ifstream envSet("environment.txt");
+        if(envSet.is_open())
+        {
+            std::string line = "";
+            while(!envSet.eof())
+            {
+                getline(envSet,line);
+
+                if(line.length() == 0)
+                    continue;
+
+                if(line[0] == '#')
+                    continue;
+
+                std::string lc = lowercase(line);
+                replaceAll(lc," ","");
+                replaceAll(lc,"\t","");
+
+                if(lc.length() < 1)
+                    continue;
+
+                if(lc == "useibl")
+                    next = useibl;
+                else if(lc == "skybox")
+                    next = skyBox;
+                else if(lc == "radiance")
+                    next = rad;
+                else if(lc == "irradiance")
+                    next = irr;
+
+                else if(lc == "dawnstart")
+                    next = dwS;
+                else if(lc == "dawnend")
+                    next = dwE;
+                else if(lc == "duskstart")
+                    next = dkS;
+                else if(lc == "duskend")
+                    next = dkE;
+                else if(lc == "secondsinday")
+                    next = secsDay;
+
+                else if(lc == "skycolors")
+                {
+                    next = skyCol;
+                    idx = 0;
+                }
+                else if(lc == "suncolors")
+                {
+                    next = sunCol;
+                    idx = 0;
+                }
+                else if(lc == "fogcolors")
+                {
+                    next = fogCol;
+                    idx = 0;
+                }
+
+                else
+                {
+                    switch(next)
+                    {
+                        case useibl: useDNC = !strToBool(line); next=none; break;
+                        case skyBox: skyBoxPath = line; next=none;  break;
+                        case irr: irradiancePath = line; next=none;  break;
+                        case rad: radiancePath = line; next=none;  break;
+                        case dwS: dawnStart = atof(line.c_str()); next=none;  break;
+                        case dwE: dawnEnd = atof(line.c_str()); next=none;  break;
+                        case dkS: duskStart = atof(line.c_str()); next=none;  break;
+                        case dkE: duskEnd = atof(line.c_str()); next=none;  break;
+                        case secsDay: secondsInDay = atof(line.c_str()); next=none;  break;
+                        case skyCol: dncSkyColors[idx/3][idx%3] = atof(line.c_str()); idx++; if(idx >= 12){next=none;} break;
+                        case fogCol: dncFogColors[idx/3][idx%3] = atof(line.c_str()); idx++; if(idx >= 12){next=none;} break;
+                        case sunCol: dncSunColors[idx/4][idx%4] = atof(line.c_str()); idx++; if(idx >= 16){next=none;} break;
+                    }
+                }
+            }
+
+            envSet.close();
+        }
+        else
+            error("Could not open environment.txt");
+    }
+};
+
 struct unifiedWorld
 {
+    dayNightCycle cycle;
+    glm::vec3 sunDirection = glm::vec3(0.540455,0.742971,0.394844);
+
+    void sendEnvironmentToClient(clientData *client);
+
     unsigned int maxPlayers = 30;
     bool mature = false;
     std::string serverName = "My Cool Server";

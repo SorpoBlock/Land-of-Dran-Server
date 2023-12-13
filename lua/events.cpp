@@ -769,10 +769,17 @@ void unifiedWorld::spawnPlayer(clientData *source,float x,float y,float z)
 
         source->sendCameraDetails();
 
-        item *wrench = common_lua->addItem(common_lua->getItemType("Wrench"));
-        common_lua->pickUpItem(source->controlling,wrench,0,source);
-        item *hammer = common_lua->addItem(common_lua->getItemType("Hammer"));
-        common_lua->pickUpItem(source->controlling,hammer,1,source);
+        if(common_lua->getItemType("Wrench"))
+        {
+            item *wrench = common_lua->addItem(common_lua->getItemType("Wrench"));
+            common_lua->pickUpItem(source->controlling,wrench,0,source);
+        }
+
+        if(common_lua->getItemType("Hammer"))
+        {
+            item *hammer = common_lua->addItem(common_lua->getItemType("Hammer"));
+            common_lua->pickUpItem(source->controlling,hammer,1,source);
+        }
         //item *gun = common_lua->addItem(common_lua->getItemType("Gun"));
         //common_lua->pickUpItem(source->controlling,gun,2,source);
 
