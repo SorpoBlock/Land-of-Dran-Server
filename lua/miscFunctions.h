@@ -5,6 +5,36 @@
 
 extern unifiedWorld *common_lua;
 
+static int setDNCTime(lua_State *L)
+{
+    float num = lua_tonumber(L,-1);
+    lua_pop(L,1);
+
+    packet dncTimePacket;
+    dncTimePacket.writeUInt(packetType_serverCommand,packetTypeBits);
+    dncTimePacket.writeString("dncTime");
+    dncTimePacket.writeFloat(num);
+
+    common_lua->theServer->send(&dncTimePacket,true);
+
+    return 0;
+}
+
+static int setDNCSpeed(lua_State *L)
+{
+    float num = lua_tonumber(L,-1);
+    lua_pop(L,1);
+
+    packet dncTimePacket;
+    dncTimePacket.writeUInt(packetType_serverCommand,packetTypeBits);
+    dncTimePacket.writeString("dncSpeed");
+    dncTimePacket.writeFloat(num);
+
+    common_lua->theServer->send(&dncTimePacket,true);
+
+    return 0;
+}
+
 static int LUAecho(lua_State *L)
 {
     const char *text = lua_tostring(L,1);
@@ -999,6 +1029,8 @@ void bindMiscFuncs(lua_State *L)
     lua_register(L,"setAudioEffect",setAudioEffect);
     lua_register(L,"radiusImpulse",radiusImpulse);
     lua_register(L,"setRespawnTime",setRespawnTime);
+    lua_register(L,"setDNCTime",setDNCTime);
+    lua_register(L,"setDNCSpeed",setDNCSpeed);
 }
 
 #endif // MISCFUNCTIONS_H_INCLUDED
