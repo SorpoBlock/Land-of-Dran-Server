@@ -2,8 +2,171 @@
 #define MISCFUNCTIONS_H_INCLUDED
 
 #include "code/unifiedWorld.h"
+#include "code/crc.h"
 
 extern unifiedWorld *common_lua;
+
+bool okayFilePath(std::string path)
+{
+    //Greater than 2 characters
+    //Not start with a . or /
+    //Can only contain a-z A-Z 0-9 _ . /
+    //Can not have a . or / as the first character
+    //Can only have one .
+    //Can not be longer than 48 characters
+
+    if(path.length() < 2)
+        return false;
+
+    if(path.length() > 48)
+        return false;
+
+    if(path[0] == '.')
+        return false;
+
+    if(path[0] == '/')
+        return false;
+
+    if(path[0] == '\\')
+        return false;
+
+    bool onePeriod = false;
+
+    for(int i = 0; path[i]; i++)
+    {
+        if(path[i] >= 'a' && path[i] <= 'z')
+            continue;
+        if(path[i] >= 'A' && path[i] <= 'Z')
+            continue;
+        if(path[i] >= '0' && path[i] <= '9')
+            continue;
+        if(path[i] == '/' || path[i] == '_')
+            continue;
+        if(path[i] == '.')
+        {
+            if(onePeriod)
+                return false;
+            else
+            {
+                onePeriod = true;
+                continue;
+            }
+        }
+
+        return false;
+    }
+
+    return true;
+}
+
+unsigned int getFileChecksum(const char *filePath)
+{
+    std::ifstream file(filePath,std::ios::in | std::ios::binary);
+    if(!file.is_open())
+        return 0;
+
+    const unsigned int bufSize = 2048;
+    char buffer[bufSize];
+    unsigned int ret = 0;
+    bool firstRun = true;
+    while(!file.eof())
+    {
+        file.read(buffer,bufSize);
+        if(firstRun)
+        {
+            ret = CRC::Calculate(buffer,file.gcount(),CRC::CRC_32());
+            firstRun = false;
+        }
+        else
+            ret = CRC::Calculate(buffer,file.gcount(),CRC::CRC_32(),ret);
+    }
+
+    file.close();
+    return ret;
+}
+
+static int addCustomFile(lua_State *L)
+{
+    scope("addCustomFile");
+
+    const char *path = lua_tostring(L,-1);
+    lua_pop(L,1);
+    const char *name = lua_tostring(L,-1);
+    lua_pop(L,1);
+
+    if(!path)
+    {
+        error("Invalid path string!");
+        return 0;
+    }
+
+    if(!name)
+    {
+        error("Invalid name string!");
+        return 0;
+    }
+
+    std::string pathStr = path;
+    std::string nameStr = name;
+
+    if(!okayFilePath(pathStr))
+    {
+        error("File path does not meet file path requirements!");
+        return 0;
+    }
+
+    if(nameStr.length() < 1 || nameStr.length() > 48)
+    {
+        error("Name must be between 1 and 48 characters!");
+        return 0;
+    }
+
+    if(!std::filesystem::exists("add-ons/"+pathStr))
+    {
+        error("File add-ons/"+pathStr+" does not exist!");
+        return 0;
+    }
+
+    unsigned int size = file_size("add-ons/"+pathStr);
+    if(size < 1 || size > 2000000)
+    {
+        error("File must be between 1 and 2 million bytes.");
+        return 0;
+    }
+
+    std::filesystem::path p(pathStr);
+    std::string ext = std::string(p.extension().u8string());
+    fileType type = discernExtension(ext);
+
+    if(type == unknownFile)
+    {
+        error("File type extension unknown: " + ext);
+        error("At the moment only .blb and .wav files are supported as I test this system.");
+        return 0;
+    }
+
+    std::string debugStr = "Added file ";
+    debugStr += path;
+    debugStr += " with name ";
+    debugStr += name;
+    debugStr += " size: ";
+    debugStr += std::to_string(size);
+    debugStr += " bytes.";
+    debug(debugStr);
+
+    fileDescriptor tmp;
+    tmp.id = common_lua->nextFileID;
+    common_lua->nextFileID++;
+    tmp.name = nameStr;
+    tmp.path = pathStr;
+    tmp.type = type;
+    tmp.sizeBytes = size;
+    tmp.checksum = getFileChecksum(std::string("add-ons/"+pathStr).c_str());
+    common_lua->customFiles.push_back(tmp);
+
+    lua_pushinteger(L,tmp.id);
+    return 1;
+}
 
 static int setDNCTime(lua_State *L)
 {
@@ -1031,6 +1194,7 @@ void bindMiscFuncs(lua_State *L)
     lua_register(L,"setRespawnTime",setRespawnTime);
     lua_register(L,"setDNCTime",setDNCTime);
     lua_register(L,"setDNCSpeed",setDNCSpeed);
+    lua_register(L,"addCustomFile",addCustomFile);
 }
 
 #endif // MISCFUNCTIONS_H_INCLUDED

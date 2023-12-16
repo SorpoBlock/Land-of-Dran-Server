@@ -288,6 +288,7 @@ struct dayNightCycle
                         case skyCol: dncSkyColors[idx/3][idx%3] = atof(line.c_str()); idx++; if(idx >= 12){next=none;} break;
                         case fogCol: dncFogColors[idx/3][idx%3] = atof(line.c_str()); idx++; if(idx >= 12){next=none;} break;
                         case sunCol: dncSunColors[idx/4][idx%4] = atof(line.c_str()); idx++; if(idx >= 16){next=none;} break;
+                        case none: error("Malformed environment.txt file, line: " + line); break;
                     }
                 }
             }
@@ -299,8 +300,32 @@ struct dayNightCycle
     }
 };
 
+enum fileType
+{
+    unknownFile = 0,
+    audioFile = 1,
+    brickFile = 2,
+    textureFile = 3,
+    modelFile = 4
+};
+
+fileType discernExtension(std::string extension);
+
+struct fileDescriptor
+{
+    int id = -1;
+    std::string path = "";
+    fileType type = unknownFile;
+    int sizeBytes = -1;
+    std::string name = "";
+    unsigned int checksum = 0;
+};
+
 struct unifiedWorld
 {
+    int nextFileID = 0;
+    std::vector<fileDescriptor> customFiles;
+
     dayNightCycle cycle;
     glm::vec3 sunDirection = glm::vec3(0.540455,0.742971,0.394844);
 

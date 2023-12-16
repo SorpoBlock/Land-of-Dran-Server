@@ -1643,6 +1643,33 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                 return;
             }
 
+            bool filesYesJoinNo = data->readBit();
+            if(filesYesJoinNo)
+            {
+                info("Sending custom file list to client, files: " + std::to_string(common->customFiles.size()));
+
+                packet commandFileAmount;
+                commandFileAmount.writeUInt(packetType_serverCommand,packetTypeBits);
+                commandFileAmount.writeString("numCustomFiles");
+                commandFileAmount.writeUInt(common->customFiles.size(),16);
+                source->netRef->send(&commandFileAmount,true);
+
+                for(int a = 0; a<common->customFiles.size(); a++)
+                {
+                    packet commandFileDescription;
+                    commandFileDescription.writeUInt(packetType_serverCommand,packetTypeBits);
+                    commandFileDescription.writeString("customFileDescription");
+                    commandFileDescription.writeString(common->customFiles[a].name);
+                    commandFileDescription.writeString(common->customFiles[a].path);
+                    commandFileDescription.writeUInt(common->customFiles[a].checksum,32);
+                    commandFileDescription.writeUInt(common->customFiles[a].sizeBytes,32);
+                    commandFileDescription.writeUInt(common->customFiles[a].type,4);
+                    commandFileDescription.writeUInt(common->customFiles[a].id,16);
+                    source->netRef->send(&commandFileDescription,true);
+                }
+                return;
+            }
+
             bool wantsLogin = data->readBit();
             if(wantsLogin)
             {

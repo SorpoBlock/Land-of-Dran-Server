@@ -1,5 +1,17 @@
 #include "code/unifiedWorld.h"
 
+fileType discernExtension(std::string extension)
+{
+    //TODO: Add the rest of the files lol
+
+    if(extension == ".wav")
+        return audioFile;
+    else if(extension == ".blb")
+        return brickFile;
+    else
+        return unknownFile;
+}
+
 void unifiedWorld::sendEnvironmentToClient(clientData *client)
 {
     packet data;

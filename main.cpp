@@ -803,6 +803,7 @@ int main(int argc, char *argv[])
         {
             float fps = frames;
             fps /= 10.0;
+            std::cout<<fps<<"\n";
             //if(fps < 10000)
               //  info("Last FPS: " + std::to_string(fps));
             frames = 0;
