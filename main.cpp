@@ -649,6 +649,26 @@ int main(int argc, char *argv[])
         i->setWorldTransform(t);
     }*/
 
+    info("Starting content server...");
+
+    IPaddress ip;
+    if(SDLNet_ResolveHost(&ip,NULL,20001) == -1)
+    {
+        error("Error resolving content server internal IP");
+        return 0;
+    }
+
+    TCPsocket cdnSocket = SDLNet_TCP_Open(&ip);
+    if(!cdnSocket)
+    {
+        error("Error opening content server.");
+        return 0;
+    }
+
+    std::vector<TCPsocket> cdnClients;
+    std::vector<SDLNet_SocketSet> cdnClientSocketSets;
+    std::vector<std::string> cdnClientResponseString;
+
     info("Start-up complete.");
 
     bool cont = true;
@@ -689,6 +709,155 @@ int main(int argc, char *argv[])
     unsigned int msAtLastUpdate = 0;
     while(cont)
     {
+        //Start CDN server code
+        TCPsocket cdnClient = SDLNet_TCP_Accept(cdnSocket);
+        if(cdnClient)
+        {
+            if(cdnClients.size() >= 10)
+            {
+                error("More than 10 simultaneous CDN connections, rejecting connection.");
+                SDLNet_TCP_Close(cdnClient);
+            }
+            else
+            {
+                info("Accepted a cdn client.");
+                SDLNet_SocketSet tmpSocketSet = SDLNet_AllocSocketSet(1);
+                SDLNet_TCP_AddSocket(tmpSocketSet,cdnClient);
+                cdnClientSocketSets.push_back(tmpSocketSet);
+                cdnClients.push_back(cdnClient);
+                cdnClientResponseString.push_back("");
+            }
+        }
+
+        if(cdnClients.size() > 0)
+        {
+            for(int a = 0; a<cdnClients.size(); a++)
+            {
+                int checkSocketsRet = SDLNet_CheckSockets(cdnClientSocketSets[a],0);
+                if(checkSocketsRet > 0)
+                {
+                    char *recvData = new char[1024];
+                    int recvBytes = SDLNet_TCP_Recv(cdnClients[a],recvData,1024);
+                    if(recvBytes <= 0)
+                    {
+                        info("CDN client disconnected!");
+                        SDLNet_TCP_DelSocket(cdnClientSocketSets[a],cdnClients[a]);
+                        SDLNet_FreeSocketSet(cdnClientSocketSets[a]);
+                        cdnClientSocketSets[a] = 0;
+                        cdnClientSocketSets.erase(cdnClientSocketSets.begin() + a);
+                        SDLNet_TCP_Close(cdnClients[a]);
+                        cdnClients[a] = 0;
+                        cdnClients.erase(cdnClients.begin() + a);
+                        cdnClientResponseString.erase(cdnClientResponseString.begin() + a);
+                        delete recvData;
+                        break;
+                    }
+                    else
+                    {
+                        cdnClientResponseString[a] += std::string(recvData).substr(0,recvBytes);
+                        if(cdnClientResponseString[a].find("END") != std::string::npos)
+                        {
+                            std::stringstream s(cdnClientResponseString[a]);
+                            std::string line = "";
+                            int expectedFiles = -1;
+                            bool breakOuterLoop = false;
+
+                            while(getline(s,line,'\n'))
+                            {
+                                std::cout<<"Line: "<<line<<"\n";
+
+                                if(expectedFiles == -1)
+                                {
+                                    if(line.find("FILES") == std::string::npos)
+                                    {
+                                        error("CDN Request from client malformed!");
+                                        SDLNet_TCP_DelSocket(cdnClientSocketSets[a],cdnClients[a]);
+                                        SDLNet_FreeSocketSet(cdnClientSocketSets[a]);
+                                        cdnClientSocketSets[a] = 0;
+                                        cdnClientSocketSets.erase(cdnClientSocketSets.begin() + a);
+                                        SDLNet_TCP_Close(cdnClients[a]);
+                                        cdnClients[a] = 0;
+                                        cdnClients.erase(cdnClients.begin() + a);
+                                        cdnClientResponseString.erase(cdnClientResponseString.begin() + a);
+                                        delete recvData;
+                                        breakOuterLoop = true;
+                                        break;
+                                    }
+                                    expectedFiles = atoi(line.substr(5,line.length()-5).c_str());
+                                    continue;
+                                }
+
+                                if(expectedFiles == 0)
+                                {
+                                    if(line != "END")
+                                        error("End of CDN Request from client malformed!");
+
+                                    SDLNet_TCP_DelSocket(cdnClientSocketSets[a],cdnClients[a]);
+                                    SDLNet_FreeSocketSet(cdnClientSocketSets[a]);
+                                    cdnClientSocketSets[a] = 0;
+                                    cdnClientSocketSets.erase(cdnClientSocketSets.begin() + a);
+                                    SDLNet_TCP_Close(cdnClients[a]);
+                                    cdnClients[a] = 0;
+                                    cdnClients.erase(cdnClients.begin() + a);
+                                    cdnClientResponseString.erase(cdnClientResponseString.begin() + a);
+                                    delete recvData;
+                                    breakOuterLoop = true;
+                                    break;
+                                }
+
+                                int fileID = atoi(line.c_str());
+                                std::cout<<"Sending file "<<fileID<<"\n";
+
+                                if(fileID >= common.customFiles.size() || fileID < 0)
+                                {
+                                    error("Invalid custom file index from CDN client.");
+                                    SDLNet_TCP_DelSocket(cdnClientSocketSets[a],cdnClients[a]);
+                                    SDLNet_FreeSocketSet(cdnClientSocketSets[a]);
+                                    cdnClientSocketSets[a] = 0;
+                                    cdnClientSocketSets.erase(cdnClientSocketSets.begin() + a);
+                                    SDLNet_TCP_Close(cdnClients[a]);
+                                    cdnClients[a] = 0;
+                                    cdnClients.erase(cdnClients.begin() + a);
+                                    cdnClientResponseString.erase(cdnClientResponseString.begin() + a);
+                                    delete recvData;
+                                    breakOuterLoop = true;
+                                    break;
+                                }
+
+                                std::ifstream cdnFileHandle(std::string("add-ons/"+common.customFiles[fileID].path).c_str(),std::ios::binary);
+
+                                int bytesToSend = common.customFiles[fileID].sizeBytes;
+                                int bytesSent = 0;
+                                while(bytesToSend > 0)
+                                {
+                                    int bytesThisPacket = std::min(1024,bytesToSend);
+
+                                    char *buf = new char[bytesThisPacket];
+                                    cdnFileHandle.read(buf,bytesThisPacket);
+                                    SDLNet_TCP_Send(cdnClients[a],buf,bytesThisPacket);
+                                    delete buf;
+
+                                    bytesToSend -= bytesThisPacket;
+                                    bytesSent += bytesThisPacket;
+                                }
+
+                                cdnFileHandle.close();
+
+                                expectedFiles--;
+                            }
+                            if(breakOuterLoop)
+                                break;
+                        }
+                    }
+                    delete recvData;
+                }
+                else if(checkSocketsRet < 0)
+                    error("SDLNet_CheckSockets returned error");
+            }
+        }
+
+        //End CDN server code
+
         if(!silent && (SDL_GetTicks() - lastMasterListPost > 60000*4))
         {
             lastMasterListPost = SDL_GetTicks();
@@ -1511,6 +1680,8 @@ int main(int argc, char *argv[])
 
         common.theServer->run();
     }
+
+    SDLNet_TCP_Close(cdnSocket);
 
     return 0;
 }

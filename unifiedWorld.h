@@ -33,7 +33,7 @@ extern "C" {
     #include <lauxlib.h>
 }
 
-#define hardCodedNetworkVersion 10014
+#define hardCodedNetworkVersion 10015
 
 struct clientData
 {
