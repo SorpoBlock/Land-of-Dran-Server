@@ -1082,6 +1082,76 @@ static int radiusImpulse(lua_State *L)
     return 0;
 }
 
+static int addSoundType(lua_State *L)
+{
+    scope("addSoundType");
+
+    int numArgs = lua_gettop(L);
+    if(numArgs != 2)
+    {
+        lua_pop(L,numArgs);
+        error("Wrong # args. addSoundFile(fileID,scriptName)");
+        return 0;
+    }
+
+    const char *scriptName = lua_tostring(L,-1);
+    lua_pop(L,1);
+
+    if(!scriptName)
+    {
+        error("Invalid name string for sound file.");
+        return 0;
+    }
+
+    int fileID = lua_tointeger(L,-1);
+    lua_pop(L,1);
+
+    if(fileID < 0 || fileID >= common_lua->customFiles.size())
+    {
+        error("Invalid file index: " + std::to_string(fileID));
+        return 0;
+    }
+
+    common_lua->addSoundType(std::string(scriptName),"add-ons/" + common_lua->customFiles[fileID].path);
+
+    return 0;
+}
+
+static int addMusicType(lua_State *L)
+{
+    scope("addMusicType");
+
+    int numArgs = lua_gettop(L);
+    if(numArgs != 2)
+    {
+        lua_pop(L,numArgs);
+        error("Wrong # args. addMusicFile(fileID,scriptName)");
+        return 0;
+    }
+
+    const char *scriptName = lua_tostring(L,-1);
+    lua_pop(L,1);
+
+    if(!scriptName)
+    {
+        error("Invalid name string for sound file.");
+        return 0;
+    }
+
+    int fileID = lua_tointeger(L,-1);
+    lua_pop(L,1);
+
+    if(fileID < 0 || fileID >= common_lua->customFiles.size())
+    {
+        error("Invalid file index: " + std::to_string(fileID));
+        return 0;
+    }
+
+    common_lua->addMusicType(std::string(scriptName),"add-ons/" + common_lua->customFiles[fileID].path);
+
+    return 0;
+}
+
 void bindMiscFuncs(lua_State *L)
 {
     lua_register(L,"echo",LUAecho);
@@ -1104,6 +1174,8 @@ void bindMiscFuncs(lua_State *L)
     lua_register(L,"setDNCTime",setDNCTime);
     lua_register(L,"setDNCSpeed",setDNCSpeed);
     lua_register(L,"addCustomFile",addCustomFile);
+    lua_register(L,"addSoundType",addSoundType);
+    lua_register(L,"addMusicType",addMusicType);
 }
 
 #endif // MISCFUNCTIONS_H_INCLUDED
