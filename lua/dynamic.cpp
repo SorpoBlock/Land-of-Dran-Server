@@ -638,6 +638,8 @@ static int attachByRope(lua_State *L)
     b->activate();
 
     common_lua->addRope(a,b);
+
+    return 0;
 }
 
 static int attachByHinge(lua_State *L)
@@ -666,6 +668,8 @@ static int attachByHinge(lua_State *L)
     btHingeConstraint *h = new btHingeConstraint(*a,*b,btVector3(0,0,0),btVector3(0,0,0),btVector3(0,1,0),btVector3(0,1,0));
     h->setLimit(-SIMD_PI * 0.25,SIMD_PI * 0.25);
     common_lua->physicsWorld->addConstraint(h);
+
+    return 0;
 }
 
 static int getHeldTool(lua_State *L)

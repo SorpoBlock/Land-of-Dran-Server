@@ -49,6 +49,8 @@ static int luaLightRemove(lua_State *L)
     light *l = popLight(L);
     if(l)
         common_lua->removeLight(l);
+
+    return 0;
 }
 
 static int addLight(lua_State *L)

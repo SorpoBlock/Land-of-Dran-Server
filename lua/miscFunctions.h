@@ -272,6 +272,8 @@ static int setColorPalette(lua_State *L)
     data.writeUInt(cal,8);
 
     common_lua->theServer->send(&data,true);
+
+    return 0;
 }
 
 static int playSound(lua_State *L)
@@ -438,6 +440,8 @@ static int clearAllCars(lua_State *L)
 {
     while(common_lua->brickCars.size() > 0)
         common_lua->removeBrickCar(common_lua->brickCars[0]);
+
+    return 0;
 }
 
 static int bottomPrintAll(lua_State *L)
@@ -564,109 +568,10 @@ static int clearAllBricks(lua_State *L)
         common_lua->namedBricks[a].bricks.clear();
     common_lua->namedBricks.clear();
 
-    /*delete common_lua->tree;
-    common_lua->tree = new Octree<brick*>(brickTreeSize*2,0);
-    common_lua->tree->setEmptyValue(0);*/
-
     delete common_lua->overlapTree;
     common_lua->overlapTree = new brickPointerTree;
 
-    /*int bricksToRemove = common_lua->bricks.size();
-    unsigned int bricksRemoved = 0;
-
-    if(bricksToRemove == 0)
-        return 0;
-
-    int bricksPerPacket = 255;
-    while(bricksToRemove > 0)
-    {
-        int bricksInThisPacket = bricksPerPacket;
-        if(bricksInThisPacket > bricksToRemove)
-            bricksInThisPacket = bricksToRemove;
-
-        packet data;
-        data.writeUInt(packetType_removeBrick,packetTypeBits);
-        data.writeUInt(bricksInThisPacket,8);
-
-        for(unsigned int i = bricksRemoved; i < bricksRemoved + bricksInThisPacket; i++)
-        {
-            brick *theBrick = common_lua->bricks[i];
-
-            data.writeUInt(theBrick->serverID,20);
-
-            if(theBrick->music > 0)
-                common_lua->setMusic(theBrick,0);
-
-            common_lua->setBrickName(theBrick,"");
-
-            if(theBrick->body)
-            {
-                common_lua->physicsWorld->removeRigidBody(theBrick->body);
-                delete theBrick->body;
-                theBrick->body = 0;
-            }
-
-            int fx = theBrick->posX + brickTreeSize;
-            int fy = ((float)theBrick->uPosY) + (theBrick->yHalfPosition ? 1.0 : 0.0) - ((float)theBrick->height)/2.0;
-            int fz = theBrick->posZ + brickTreeSize;
-            if(theBrick->angleID % 2 == 0)
-            {
-                fx -= ((float)theBrick->width)/2.0 - (theBrick->xHalfPosition ? 0.5 : 0.0);
-                fz -= ((float)theBrick->length)/2.0 - (theBrick->zHalfPosition ? 0.5 : 0.0);
-            }
-            else
-            {
-                fz -= ((float)theBrick->width)/2.0 - (theBrick->zHalfPosition ? 0.5 : 0.0);
-                fx -= ((float)theBrick->length)/2.0 - (theBrick->xHalfPosition ? 0.5 : 0.0);
-            }
-
-            for(int x = 0; x<theBrick->width; x++)
-            {
-                for(int z = 0; z<theBrick->length; z++)
-                {
-                    if(theBrick->angleID % 2 == 0)
-                    {
-                        for(int y = 0; y<theBrick->height; y++)
-                        {
-                            common_lua->tree->set(fx+x,fy+y,fz+z,0);
-                        }
-                    }
-                    else
-                    {
-                        for(int y = 0; y<theBrick->height; y++)
-                        {
-                            common_lua->tree->set(fx+z,fy+y,fz+x,0);
-                        }
-                    }
-                }
-            }
-        }
-
-        common_lua->theServer->send(&data,true);
-
-        bricksRemoved += bricksInThisPacket;
-        bricksToRemove -= bricksInThisPacket;
-    }
-
-    for(int a = 0; a<common_lua->bricks.size(); a++)
-    {
-        if(common_lua->bricks[a])
-        {
-            delete common_lua->bricks[a];
-            common_lua->bricks[a] = 0;
-        }
-    }
-
-    for(int a = 0; a<common_lua->users.size(); a++)
-        common_lua->users[a]->ownedBricks.clear();
-
-    common_lua->bricks.clear();
-
-    for(int a = 0; a<common_lua->namedBricks.size(); a++)
-        common_lua->namedBricks[a].bricks.clear();
-    common_lua->namedBricks.clear();
-
-    return 0;*/
+    return 0;
 }
 
 static int loadLodSave(lua_State *L)
@@ -1052,6 +957,8 @@ static int setWaterLevel(lua_State *L)
     waterLevel.writeString("setWaterLevel");
     waterLevel.writeFloat(level);
     common_lua->theServer->send(&waterLevel,true);
+
+    return 0;
 }
 
 static int setRespawnTime(lua_State *L)
@@ -1074,6 +981,8 @@ static int setRespawnTime(lua_State *L)
         level = 60000;
 
     common_lua->respawnTimeMS = level;
+
+    return 0;
 }
 
 static int setAudioEffect(lua_State *L)

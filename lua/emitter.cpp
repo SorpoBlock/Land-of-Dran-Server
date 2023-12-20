@@ -505,6 +505,8 @@ static int attachToBrick(lua_State *L)
 
     for(unsigned int a = 0; a<common_lua->users.size(); a++)
         e->sendToClient(common_lua->users[a]->netRef);
+
+    return 0;
 }
 
 static int attachToDynamic(lua_State *L)
@@ -565,6 +567,8 @@ static int attachToDynamic(lua_State *L)
 
     for(unsigned int a = 0; a<common_lua->users.size(); a++)
         e->sendToClient(common_lua->users[a]->netRef);
+
+    return 0;
 }
 
 static int getEmitterTable(lua_State *L)

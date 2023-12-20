@@ -338,6 +338,8 @@ rope *unifiedWorld::addRope(btRigidBody *a,btRigidBody *b,bool useCenterPos,btVe
 
     for(int a = 0; a<users.size(); a++)
         tmp->sendToClient(users[a]->netRef);
+
+    return tmp;
 }
 
 emitterType *unifiedWorld::getEmitterType(std::string name)
