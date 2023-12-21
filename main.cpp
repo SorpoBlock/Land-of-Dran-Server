@@ -764,8 +764,6 @@ int main(int argc, char *argv[])
 
                             while(getline(s,line,'\n'))
                             {
-                                std::cout<<"Line: "<<line<<"\n";
-
                                 if(expectedFiles == -1)
                                 {
                                     if(line.find("FILES") == std::string::npos)
@@ -784,6 +782,7 @@ int main(int argc, char *argv[])
                                         break;
                                     }
                                     expectedFiles = atoi(line.substr(5,line.length()-5).c_str());
+                                    info("New client requesting download of " + std::to_string(expectedFiles) + " files.");
                                     continue;
                                 }
 
@@ -806,7 +805,7 @@ int main(int argc, char *argv[])
                                 }
 
                                 int fileID = atoi(line.c_str());
-                                std::cout<<"Sending file "<<fileID<<"\n";
+                                //std::cout<<"Sending file "<<fileID<<"\n";
 
                                 if(fileID >= common.customFiles.size() || fileID < 0)
                                 {

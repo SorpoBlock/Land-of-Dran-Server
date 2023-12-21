@@ -8,6 +8,8 @@ fileType discernExtension(std::string extension)
         return audioFile;
     else if(extension == ".blb")
         return brickFile;
+    else if(extension == ".png")
+        return textureFile;
     else
         return unknownFile;
 }

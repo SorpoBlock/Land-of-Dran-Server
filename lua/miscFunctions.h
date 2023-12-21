@@ -10,15 +10,15 @@ bool okayFilePath(std::string path)
 {
     //Greater than 2 characters
     //Not start with a . or /
-    //Can only contain a-z A-Z 0-9 _ . /
+    //Can only contain a-z A-Z 0-9 _ . / -
     //Can not have a . or / as the first character
     //Can only have one .
-    //Can not be longer than 48 characters
+    //Can not be longer than 64 characters
 
     if(path.length() < 2)
         return false;
 
-    if(path.length() > 48)
+    if(path.length() > 64)
         return false;
 
     if(path[0] == '.')
@@ -39,6 +39,8 @@ bool okayFilePath(std::string path)
         if(path[i] >= 'A' && path[i] <= 'Z')
             continue;
         if(path[i] >= '0' && path[i] <= '9')
+            continue;
+        if(path[i] == '-')
             continue;
         if(path[i] == '/' || path[i] == '_')
             continue;
@@ -109,6 +111,16 @@ static int addCustomFile(lua_State *L)
     std::string pathStr = path;
     std::string nameStr = name;
 
+    for(int a = 0; a<common_lua->customFiles.size(); a++)
+    {
+        if(common_lua->customFiles[a].name == nameStr)
+        {
+            debug("Custom file " + pathStr + " | " + nameStr + " added multiple times!");
+            lua_pushinteger(L,common_lua->customFiles[a].id);
+            return 1;
+        }
+    }
+
     if(!okayFilePath(pathStr))
     {
         error("File path does not meet file path requirements!");
@@ -141,7 +153,7 @@ static int addCustomFile(lua_State *L)
     if(type == unknownFile)
     {
         error("File type extension unknown: " + ext);
-        error("At the moment only .blb and .wav files are supported as I test this system.");
+        error("At the moment only .blb .wav and .png files are supported as I test this system.");
         return 0;
     }
 
@@ -1152,6 +1164,195 @@ static int addMusicType(lua_State *L)
     return 0;
 }
 
+static int addSpecialBrickTypeLua(lua_State *L)
+{
+    scope("addSpecialBrickTypeLua");
+
+    bool customCollisionMesh = false;
+
+    int numArgs = lua_gettop(L);
+    if(numArgs < 2 || numArgs > 3)
+    {
+        error("Needs 2 or 3 arguments. addSpecialBrickType(path,name,(optional)useCustomColMesh)");
+        lua_pop(L,numArgs);
+        return 0;
+    }
+
+    if(numArgs == 3)
+    {
+        customCollisionMesh = lua_toboolean(L,-1);
+        lua_pop(L,1);
+    }
+
+    const char *name = lua_tostring(L,-1);
+    lua_pop(L,1);
+    const char *path = lua_tostring(L,-1);
+    lua_pop(L,1);
+    if(!path)
+    {
+        error("Invalid path string!");
+        return 0;
+    }
+
+    if(!name)
+    {
+        error("Invalid name string!");
+        return 0;
+    }
+
+    std::string pathStr = path;
+    std::string nameStr = name;
+
+    //Add custom file for .blb
+
+    if(!okayFilePath(pathStr))
+    {
+        error("File path |"+pathStr+"| does not meet file path requirements!");
+        return 0;
+    }
+
+    if(nameStr.length() < 1 || nameStr.length() > 48)
+    {
+        error("Name must be between 1 and 48 characters!");
+        return 0;
+    }
+
+    if(!std::filesystem::exists("add-ons/"+pathStr))
+    {
+        error("File add-ons/"+pathStr+" does not exist!");
+        return 0;
+    }
+
+    unsigned int size = file_size("add-ons/"+pathStr);
+    if(size < 1 || size > 2000000)
+    {
+        error("File must be between 1 and 2 million bytes.");
+        return 0;
+    }
+
+    std::filesystem::path p(pathStr);
+    std::string ext = std::string(p.extension().u8string());
+    fileType type = discernExtension(ext);
+
+    if(type == unknownFile)
+    {
+        error("File type extension unknown: " + ext);
+        error("At the moment only .blb .wav and .png files are supported as I test this system.");
+        return 0;
+    }
+
+    std::string debugStr = "Added file ";
+    debugStr += path;
+    debugStr += " with name ";
+    debugStr += name;
+    debugStr += " size: ";
+    debugStr += std::to_string(size);
+    debugStr += " bytes.";
+    debug(debugStr);
+
+    fileDescriptor tmp;
+    tmp.id = common_lua->nextFileID;
+    common_lua->nextFileID++;
+    tmp.name = nameStr;
+    tmp.path = pathStr;
+    tmp.type = type;
+    tmp.sizeBytes = size;
+    tmp.checksum = getFileChecksum(std::string("add-ons/"+pathStr).c_str());
+    common_lua->customFiles.push_back(tmp);
+
+    //Check for brick icon and add it if need be:
+
+    std::string iconPath = tmp.path;
+    replaceAll(iconPath,".blb",".png");
+
+    if(std::filesystem::exists("add-ons/"+iconPath))
+    {
+        if(!okayFilePath(iconPath))
+        {
+            error("File path |"+iconPath+"| does not meet file path requirements!");
+            return 0;
+        }
+
+        if(nameStr.length() < 1 || nameStr.length() > 48)
+        {
+            error("Name must be between 1 and 48 characters!");
+            return 0;
+        }
+
+        unsigned int size = file_size("add-ons/"+iconPath);
+        if(size < 1 || size > 2000000)
+        {
+            error("File must be between 1 and 2 million bytes.");
+            return 0;
+        }
+
+        std::filesystem::path p(iconPath);
+        std::string ext = std::string(p.extension().u8string());
+        fileType type = discernExtension(ext);
+
+        if(type == unknownFile)
+        {
+            error("File type extension unknown: " + ext);
+            error("At the moment only .blb .wav and .png files are supported as I test this system.");
+            return 0;
+        }
+
+        std::string debugStr = "Added file ";
+        debugStr += path;
+        debugStr += " with name ";
+        debugStr += name;
+        debugStr += " size: ";
+        debugStr += std::to_string(size);
+        debugStr += " bytes.";
+        debug(debugStr);
+
+        fileDescriptor tmp;
+        tmp.id = common_lua->nextFileID;
+        common_lua->nextFileID++;
+        tmp.name = nameStr;
+        tmp.path = iconPath;
+        tmp.type = type;
+        tmp.sizeBytes = size;
+        tmp.checksum = getFileChecksum(std::string("add-ons/"+iconPath).c_str());
+        common_lua->customFiles.push_back(tmp);
+    }
+
+    //Actually add brick type:
+
+    brickType *newBrick = new brickType;
+    newBrick->uiname = lowercase(nameStr);
+    newBrick->fileName = "add-ons/"+pathStr;
+    newBrick->special = true;
+
+    if(customCollisionMesh)
+        newBrick->initModTerrain(newBrick->fileName);
+    else
+    {
+        std::ifstream blbFile(newBrick->fileName.c_str());
+        if(!blbFile.is_open())
+        {
+            error("Could not open blb file: " + newBrick->fileName);
+            delete newBrick;
+            return 0;
+        }
+        std::string dims = "";
+        getline(blbFile,dims);
+        std::vector<std::string> words;
+        split(dims,words);
+        getline(blbFile,dims);
+        blbFile.close();
+        int x = atoi(words[0].c_str());
+        int y = atoi(words[2].c_str());
+        int z = atoi(words[1].c_str());
+        newBrick->init(x,y,z,common_lua->brickTypes->collisionShapes);
+    }
+    common_lua->brickTypes->brickTypes.push_back(newBrick);
+    common_lua->brickTypes->specialBrickTypes++;
+
+    lua_pushinteger(L,tmp.id);
+    return 1;
+}
+
 void bindMiscFuncs(lua_State *L)
 {
     lua_register(L,"echo",LUAecho);
@@ -1176,6 +1377,7 @@ void bindMiscFuncs(lua_State *L)
     lua_register(L,"addCustomFile",addCustomFile);
     lua_register(L,"addSoundType",addSoundType);
     lua_register(L,"addMusicType",addMusicType);
+    lua_register(L,"addSpecialBrickType",addSpecialBrickTypeLua);
 }
 
 #endif // MISCFUNCTIONS_H_INCLUDED

@@ -297,6 +297,7 @@ void brickLoader::sendTypesToClient(serverClientHandle *target)
                 totalSent++;
                 data.writeUInt(nextToSend + iter,10); //Maximum of 1024 brick types for now
                 data.writeString(brickTypes[nextToSend+iter]->fileName);
+                data.writeBit(brickTypes[nextToSend+iter]->isModTerrain);
                 leftToSend--;
                 inPacket++;
             }
@@ -669,8 +670,21 @@ brickLoader::brickLoader(std::string typesFolder,std::string printsFolder)
                 if(dims == "SPECIAL" || dims == "SPECIALBRICK")
                 {
                     toEdit->special = true;
-                    toEdit->fullPath = i->path().string();
                     specialBrickTypes++;
+
+                    /*std::ofstream luaFile(i->path().parent_path().string() + "/server.lua",std::ios::app);
+
+                    std::string addonName = i->path().parent_path().filename().string();
+                    if(addonName.substr(0,6) != "Brick_")
+                        addonName = "Brick_" + addonName;
+
+                    // addSpecialBrickType("Brick_Arch/1x3arch.blb","1x3arch"
+
+                    bool modTer = toEdit->fileName.find("ModTer") != std::string::npos;
+
+                    luaFile<<"addSpecialBrickType(\""<<addonName<<"/"<<i->path().filename().string()<<"\",\""<<toEdit->uiname<<"\","<<(modTer?"true":"false")<<")\n";
+
+                    luaFile.close();*/
                 }
                 else if(dims == "BRICK")
                 {

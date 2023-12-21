@@ -48,7 +48,6 @@ struct brickType
     int width=0,height=0,length=0;
     std::string uiname = "";
     std::string fileName = "";
-    std::string fullPath = "";
     bool special = false;
 
     bool isModTerrain = false;
