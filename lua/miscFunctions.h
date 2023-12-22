@@ -200,6 +200,8 @@ static int setDNCSpeed(lua_State *L)
     float num = lua_tonumber(L,-1);
     lua_pop(L,1);
 
+    common_lua->cycle.secondsInDay = num;
+
     packet dncTimePacket;
     dncTimePacket.writeUInt(packetType_serverCommand,packetTypeBits);
     dncTimePacket.writeString("dncSpeed");
@@ -1169,16 +1171,23 @@ static int addSpecialBrickTypeLua(lua_State *L)
     scope("addSpecialBrickTypeLua");
 
     bool customCollisionMesh = false;
+    bool isWheel = false;
 
     int numArgs = lua_gettop(L);
-    if(numArgs < 2 || numArgs > 3)
+    if(numArgs < 2 || numArgs > 4)
     {
-        error("Needs 2 or 3 arguments. addSpecialBrickType(path,name,(optional)useCustomColMesh)");
+        error("Needs 2 to 4 arguments. addSpecialBrickType(path,name,(optional)useCustomColMesh,(optional)isWheel)");
         lua_pop(L,numArgs);
         return 0;
     }
 
-    if(numArgs == 3)
+    if(numArgs == 4)
+    {
+        isWheel = lua_toboolean(L,-1);
+        lua_pop(L,1);
+    }
+
+    if(numArgs == 3 || numArgs == 4)
     {
         customCollisionMesh = lua_toboolean(L,-1);
         lua_pop(L,1);
@@ -1323,6 +1332,7 @@ static int addSpecialBrickTypeLua(lua_State *L)
     newBrick->uiname = lowercase(nameStr);
     newBrick->fileName = "add-ons/"+pathStr;
     newBrick->special = true;
+    newBrick->isWheelType = isWheel;
 
     if(customCollisionMesh)
         newBrick->initModTerrain(newBrick->fileName);

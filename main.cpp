@@ -146,6 +146,8 @@ int main(int argc, char *argv[])
     for(int a = 0; a<64; a++)
         common.colorSet.push_back({1,0,0,1});
 
+    create_directory("logs");
+
     logger::setErrorFile("logs/error.txt");
     logger::setInfoFile("logs/log.txt");
     logger::setDebug(false);
@@ -971,7 +973,7 @@ int main(int argc, char *argv[])
         {
             float fps = frames;
             fps /= 10.0;
-            std::cout<<fps<<"\n";
+            //std::cout<<fps<<"\n";
             //if(fps < 10000)
               //  info("Last FPS: " + std::to_string(fps));
             frames = 0;

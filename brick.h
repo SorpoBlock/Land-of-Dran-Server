@@ -51,6 +51,7 @@ struct brickType
     bool special = false;
 
     bool isModTerrain = false;
+    bool isWheelType = false;
     //btBvhTriangleMeshShape *modTerShape = 0;
     btConvexHullShape *modTerShape = 0;
 

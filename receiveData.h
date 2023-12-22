@@ -323,7 +323,8 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                             error("Invalid typeID " + std::to_string(typeID) + " on special brick carPlant request.");
                         else
                         {
-                            if(common->brickTypes->brickTypes[typeID]->uiname.find("vert wheel") == std::string::npos)
+                            if(common->brickTypes->brickTypes[typeID]->isWheelType)
+                            //if(common->brickTypes->brickTypes[typeID]->uiname.find("vert wheel") == std::string::npos)
                                 error("Wheel brick data type from loaded car is not wheel?");
                             else
                                 wheel.brickTypeID = typeID;
@@ -399,7 +400,8 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                             tmp->isSteeringWheel = true;
                             tmp->isWheel = false;
                         }
-                        else if(common->brickTypes->brickTypes[typeID]->uiname.find("vert wheel") != std::string::npos)
+                        else if(common->brickTypes->brickTypes[typeID]->isWheelType)
+                        //else if(common->brickTypes->brickTypes[typeID]->uiname.find("vert wheel") != std::string::npos)
                         {
                             tmp = new wheelBrick;
                             tmp->isWheel = true;
@@ -1148,7 +1150,8 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
             {
                 typeID = data->readUInt(10);
 
-                if(common->brickTypes->brickTypes[typeID]->uiname.find("vert wheel") != std::string::npos)
+                //if(common->brickTypes->brickTypes[typeID]->uiname.find("vert wheel") != std::string::npos)
+                if(common->brickTypes->brickTypes[typeID]->isWheelType)
                     isWheel = true;
                 if(common->brickTypes->brickTypes[typeID]->uiname.find("steering") != std::string::npos)
                     isSteeringWheel = true;
