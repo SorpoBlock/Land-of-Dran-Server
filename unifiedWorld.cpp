@@ -4,9 +4,9 @@ fileType discernExtension(std::string extension)
 {
     //TODO: Add the rest of the files lol
 
-    if(extension == ".wav")
+    if(extension == ".wav" || extension == ".ogg" || extension == ".mod")
         return audioFile;
-    else if(extension == ".blb")
+    else if(extension == ".blb" || extension == ".obj")
         return brickFile;
     else if(extension == ".png")
         return textureFile;

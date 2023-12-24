@@ -1272,7 +1272,7 @@ static int addSpecialBrickTypeLua(lua_State *L)
     //Check for brick icon and add it if need be:
 
     std::string iconPath = tmp.path;
-    replaceAll(iconPath,".blb",".png");
+    replaceAll(iconPath,ext,".png");
 
     if(std::filesystem::exists("add-ons/"+iconPath))
     {
@@ -1334,28 +1334,102 @@ static int addSpecialBrickTypeLua(lua_State *L)
     newBrick->special = true;
     newBrick->isWheelType = isWheel;
 
-    if(customCollisionMesh)
-        newBrick->initModTerrain(newBrick->fileName);
-    else
+    if(ext == ".obj")
     {
-        std::ifstream blbFile(newBrick->fileName.c_str());
-        if(!blbFile.is_open())
+        Assimp::Importer importer;
+        const aiScene *scene = importer.ReadFile("add-ons/"+tmp.path,0);
+
+        if(!scene)
         {
-            error("Could not open blb file: " + newBrick->fileName);
+            error("Error loading brick model: add-ons/"+tmp.path);
             delete newBrick;
             return 0;
         }
-        std::string dims = "";
-        getline(blbFile,dims);
-        std::vector<std::string> words;
-        split(dims,words);
-        getline(blbFile,dims);
-        blbFile.close();
-        int x = atoi(words[0].c_str());
-        int y = atoi(words[2].c_str());
-        int z = atoi(words[1].c_str());
-        newBrick->init(x,y,z,common_lua->brickTypes->collisionShapes);
+
+        if(scene->mNumMeshes == 0)
+        {
+            error("Brick model file add-ons/"+tmp.path + " had no meshes!");
+            delete newBrick;
+            return 0;
+        }
+
+        if(scene->mNumMeshes > 1)
+            error("Brick model file add-ons/"+tmp.path + " had multiple meshes, we will only use the first for collision!");
+
+        if(customCollisionMesh)
+        {
+
+        }
+        else
+        {
+            aiVector3D aabbMaxAI,aabbMinAI;
+
+            aiMesh *src = scene->mMeshes[0];
+            std::string name = src->mName.C_Str();
+            float maxX = src->mVertices[0].x;
+            float maxY = src->mVertices[0].y;
+            float maxZ = src->mVertices[0].z;
+            float minX = src->mVertices[0].x;
+            float minY = src->mVertices[0].y;
+            float minZ = src->mVertices[0].z;
+            for(unsigned int a = 0; a<src->mNumVertices; a++)
+            {
+                aiVector3D v = src->mVertices[a];
+                if(v.x > maxX)
+                    maxX = v.x;
+                if(v.y > maxY)
+                    maxY = v.y;
+                if(v.z > maxZ)
+                    maxZ = v.z;
+                if(v.x < minX)
+                    minX = v.x;
+                if(v.y < minY)
+                    minY = v.y;
+                if(v.z < minZ)
+                    minZ = v.z;
+            }
+            aabbMaxAI = aiVector3D(maxX,maxY,maxZ);
+            aabbMinAI = aiVector3D(minX,minY,minZ);
+
+            float xSize = ceil(aabbMaxAI.x - aabbMinAI.x);
+            float ySize = ceil(aabbMaxAI.y - aabbMinAI.y)*2.5;
+            float zSize = ceil(aabbMaxAI.z - aabbMinAI.z);
+
+            newBrick->init(xSize,ySize,zSize,common_lua->brickTypes->collisionShapes);
+        }
     }
+    else if(ext == ".blb")
+    {
+        if(customCollisionMesh)
+            newBrick->initModTerrain(newBrick->fileName);
+        else
+        {
+            std::ifstream blbFile(newBrick->fileName.c_str());
+            if(!blbFile.is_open())
+            {
+                error("Could not open blb file: " + newBrick->fileName);
+                delete newBrick;
+                return 0;
+            }
+            std::string dims = "";
+            getline(blbFile,dims);
+            std::vector<std::string> words;
+            split(dims,words);
+            getline(blbFile,dims);
+            blbFile.close();
+            int x = atoi(words[0].c_str());
+            int y = atoi(words[2].c_str());
+            int z = atoi(words[1].c_str());
+            newBrick->init(x,y,z,common_lua->brickTypes->collisionShapes);
+        }
+    }
+    else
+    {
+        delete newBrick;
+        error("Unsupported brick type extension: " + ext);
+        return 0;
+    }
+
     common_lua->brickTypes->brickTypes.push_back(newBrick);
     common_lua->brickTypes->specialBrickTypes++;
 
