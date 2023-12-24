@@ -198,6 +198,7 @@ struct dayNightCycle
 
     bool strToBool(std::string in)
     {
+        in = lowercase(in);
         if(in == "yes")
             return true;
         if(in == "true")
@@ -230,6 +231,7 @@ struct dayNightCycle
                     continue;
 
                 std::string lc = lowercase(line);
+
                 replaceAll(lc," ","");
                 replaceAll(lc,"\t","");
 

@@ -1358,14 +1358,13 @@ static int addSpecialBrickTypeLua(lua_State *L)
 
         if(customCollisionMesh)
         {
-
+            newBrick->initModTerrain(scene);
         }
         else
         {
             aiVector3D aabbMaxAI,aabbMinAI;
 
             aiMesh *src = scene->mMeshes[0];
-            std::string name = src->mName.C_Str();
             float maxX = src->mVertices[0].x;
             float maxY = src->mVertices[0].y;
             float maxZ = src->mVertices[0].z;
@@ -1394,6 +1393,11 @@ static int addSpecialBrickTypeLua(lua_State *L)
             float xSize = ceil(aabbMaxAI.x - aabbMinAI.x);
             float ySize = ceil(aabbMaxAI.y - aabbMinAI.y)*2.5;
             float zSize = ceil(aabbMaxAI.z - aabbMinAI.z);
+
+            if(fabs(maxX) > 100 || fabs(maxY) > 100 || fabs(maxZ) > 100 || fabs(minX) > 100 || fabs(minY) > 100 || fabs(minZ) > 100)
+                error("One of the dimensions for a vertex of " + tmp.path + " was over 100, are you sure you want this?");
+            if(xSize < 0.05 || ySize < 0.05 || zSize < 0.05)
+                error("Your brick's size in at least one dimension is less than 0.05, are you sure you want this?");
 
             newBrick->init(xSize,ySize,zSize,common_lua->brickTypes->collisionShapes);
         }

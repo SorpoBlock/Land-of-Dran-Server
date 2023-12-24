@@ -12,6 +12,10 @@
 #include "octree/octree.h"
 #include <filesystem>
 
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
+
 using namespace syj;
 using namespace std::filesystem;
 
@@ -56,6 +60,7 @@ struct brickType
     btConvexHullShape *modTerShape = 0;
 
     void initModTerrain(std::string blbFile);
+    void initModTerrain(const aiScene *scene);
 
     void init(int w,int h,int l,Octree<btBoxShape*> *shapes)
     {
