@@ -37,6 +37,8 @@ extern "C" {
 
 struct clientData
 {
+    bool allowedToBuild = true;
+
     //0 if a guest or if we already logged in successfully:
     CURL *authHandle = 0;
     int logInState = 0; //0 = guest, 1 = waiting for master server auth, 2 = logged in totally, 3 = log in failed, 4 = good log in needs processing

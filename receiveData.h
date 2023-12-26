@@ -1119,6 +1119,12 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
         }
         case plantBrickRequest:
         {
+            if(!source->allowedToBuild)
+            {
+                source->bottomPrint("You cannot build!",5000);
+                return;
+            }
+
             bool isSteeringWheel = false;
             bool isWheel = false;
 

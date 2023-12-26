@@ -568,6 +568,23 @@ static int setJetsEnabled(lua_State *L)
     return 0;
 }
 
+static int allowBuilding(lua_State *L)
+{
+    scope("allowBuilding");
+
+    bool toggle = lua_toboolean(L,-1);
+    lua_pop(L,1);
+
+    clientData *client = popClient(L);
+
+    if(!client)
+        return 0;
+
+    client->allowedToBuild = toggle;
+
+    return 0;
+}
+
 static int endAdminOrb(lua_State *L)
 {
     scope("endAdminOrb");
@@ -729,6 +746,7 @@ void registerClientFunctions(lua_State *L)
         {"getID",getID},
         {"isGuest",isGuest},
         {"setVignette",setVignette},
+        {"allowBuilding",allowBuilding},
         {NULL,NULL}};
     luaL_newmetatable(L,"clientMETATABLE");
     luaL_setfuncs(L,dynamicRegs,0);

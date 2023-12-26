@@ -1315,7 +1315,10 @@ void unifiedWorld::applyDamage(dynamic *d,float damage,std::string cause)
                 packet vignetteData;
                 vignetteData.writeUInt(packetType_serverCommand,packetTypeBits);
                 vignetteData.writeString("vignette");
-                vignetteData.writeFloat(damage / 25.0);
+                float vignetteAmount = damage / 25.0;
+                if(vignetteAmount > 2.0)
+                    vignetteAmount = 2.0;
+                vignetteData.writeFloat(vignetteAmount);
                 vignetteData.writeBit(false);
                 users[a]->netRef->send(&vignetteData,true);
 
