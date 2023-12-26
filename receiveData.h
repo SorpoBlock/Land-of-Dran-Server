@@ -324,10 +324,9 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                         else
                         {
                             if(common->brickTypes->brickTypes[typeID]->isWheelType)
-                            //if(common->brickTypes->brickTypes[typeID]->uiname.find("vert wheel") == std::string::npos)
-                                error("Wheel brick data type from loaded car is not wheel?");
-                            else
                                 wheel.brickTypeID = typeID;
+                            else
+                                error("Wheel brick data type " + std::to_string(typeID) +"/" + common->brickTypes->brickTypes[typeID]->uiname + " from loaded car is not wheel?");
                         }
 
                         source->loadingCar->wheels.push_back(wheel);
