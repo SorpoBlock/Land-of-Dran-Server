@@ -1110,7 +1110,7 @@ void weaponFire(dynamic *player,item *gun,float x,float y,float z,float dirX,flo
             if(closest->getUserIndex() == bodyUserIndex_dynamic)
                 raycastHit(player,gun,(dynamic*)closest,clickPos.x(),clickPos.y(),clickPos.z());
             else if(closest->getUserIndex() == bodyUserIndex_brick)
-                raycastHit(player,gun,(brick*)closest,clickPos.x(),clickPos.y(),clickPos.z());
+                raycastHit(player,gun,(brick*)closest->getUserPointer(),clickPos.x(),clickPos.y(),clickPos.z());
         }
     }
 

@@ -373,7 +373,7 @@ int main(int argc, char *argv[])
     common.softBodyWorldInfo.m_gravity = gravity;
     common.softBodyWorldInfo.m_sparsesdf.Initialize();
 
-    common.cycle.loadFromFile();
+    common.cycle.loadFromFile("environment.txt");
 
     btCollisionShape *plane = new btStaticPlaneShape(btVector3(0,1,0),0);
     btDefaultMotionState* planeState = new btDefaultMotionState();
@@ -1649,15 +1649,28 @@ int main(int argc, char *argv[])
 
             if(common.ropes.size() > 0)
             {
-                packet ropeTransformPacket;
-                ropeTransformPacket.writeUInt(packetType_updateDynamicTransforms,packetTypeBits);
-                ropeTransformPacket.writeUInt(getServerTime(),32);
-                ropeTransformPacket.writeUInt(0,8); //no vehicles or dynamics
-                ropeTransformPacket.writeUInt(0,8);
-                ropeTransformPacket.writeUInt(common.ropes.size(),8);
-                for(int a = 0; a<common.ropes.size(); a++)
-                    common.ropes[a]->addToPacket(&ropeTransformPacket);
-                common.theServer->send(&ropeTransformPacket,false);
+                int ropesToSend = common.ropes.size();
+                int sentRopes = 0;
+
+                while(ropesToSend > 0)
+                {
+                    int ropesThisPacket = 5;
+                    if(ropesToSend < 5)
+                        ropesThisPacket = ropesToSend;
+
+                    packet ropeTransformPacket;
+                    ropeTransformPacket.writeUInt(packetType_updateDynamicTransforms,packetTypeBits);
+                    ropeTransformPacket.writeUInt(getServerTime(),32);
+                    ropeTransformPacket.writeUInt(0,8); //no vehicles or dynamics
+                    ropeTransformPacket.writeUInt(0,8);
+                    ropeTransformPacket.writeUInt(ropesThisPacket,8);
+                    for(int a = sentRopes; a<sentRopes+ropesThisPacket; a++)
+                        common.ropes[a]->addToPacket(&ropeTransformPacket);
+                    common.theServer->send(&ropeTransformPacket,false);
+
+                    sentRopes += ropesThisPacket;
+                    ropesToSend -= ropesThisPacket;
+                }
             }
         }
 

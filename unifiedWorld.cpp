@@ -301,16 +301,18 @@ void unifiedWorld::removeRope(rope *toRemove,bool removeFromVector)
     toRemove = 0;
 }
 
-rope *unifiedWorld::addRope(btRigidBody *a,btRigidBody *b,bool useCenterPos,btVector3 posA,btVector3 posB)
+rope *unifiedWorld::addRope(btRigidBody *a,btRigidBody *b,btVector3 posA,btVector3 posB,int links,int fixeds)
 {
     rope *tmp = new rope;
     tmp->serverID = lastRopeID;
+    tmp->anchorA = a;
+    tmp->anchorB = b;
     lastRopeID++;
 
-    if(useCenterPos)
+    /*if(useCenterPos)
         tmp->handle = btSoftBodyHelpers::CreateRope(softBodyWorldInfo,a->getWorldTransform().getOrigin()+btVector3(0,2.5,0),b->getWorldTransform().getOrigin()+btVector3(0,2.5,0),15,0);
-    else
-        tmp->handle = btSoftBodyHelpers::CreateRope(softBodyWorldInfo,posA,posB,15,0);
+    else*/
+        tmp->handle = btSoftBodyHelpers::CreateRope(softBodyWorldInfo,posB,posA,links,fixeds);
 
     tmp->handle->setTotalMass(0.2);
     tmp->handle->setCollisionFlags(btCollisionObject::CF_STATIC_OBJECT);
@@ -1890,6 +1892,23 @@ void unifiedWorld::removeBrick(brick *theBrick)
         }
     }
 
+    if(theBrick->body)
+    {
+        auto ropeIter = ropes.begin();
+        while(ropeIter != ropes.end())
+        {
+            rope *tmp = *ropeIter;
+            if(tmp->anchorA == theBrick->body || tmp->anchorB == theBrick->body)
+            {
+                removeRope(tmp,false);
+                tmp = 0;
+                ropeIter = ropes.erase(ropeIter);
+            }
+            else
+                ++ropeIter;
+        }
+    }
+
     if(theBrick->attachedLight)
     {
         removeLight(theBrick->attachedLight);
@@ -2001,7 +2020,6 @@ void unifiedWorld::removeDynamic(dynamic *toRemove,bool dontSendPacket)
         rope *tmp = *ropeIter;
         if(tmp->anchorA == toRemove || tmp->anchorB == toRemove)
         {
-            std::cout<<"Found a rope to remove!\n";
             removeRope(tmp,false);
             tmp = 0;
             ropeIter = ropes.erase(ropeIter);

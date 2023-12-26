@@ -1441,6 +1441,25 @@ static int addSpecialBrickTypeLua(lua_State *L)
     return 1;
 }
 
+static int reloadEnvironment(lua_State *L)
+{
+    scope("reloadEnvironment");
+
+    const char *path = lua_tostring(L,-1);
+    if(!path)
+    {
+        error("Invalid path string!");
+        return 0;
+    }
+
+    common_lua->cycle.loadFromFile(std::string(path));
+
+    for(int a = 0; a<common_lua->users.size(); a++)
+        common_lua->sendEnvironmentToClient(common_lua->users[a]);
+
+    return 0;
+}
+
 void bindMiscFuncs(lua_State *L)
 {
     lua_register(L,"echo",LUAecho);
@@ -1466,6 +1485,7 @@ void bindMiscFuncs(lua_State *L)
     lua_register(L,"addSoundType",addSoundType);
     lua_register(L,"addMusicType",addMusicType);
     lua_register(L,"addSpecialBrickType",addSpecialBrickTypeLua);
+    lua_register(L,"reloadEnvironment",reloadEnvironment);
 }
 
 #endif // MISCFUNCTIONS_H_INCLUDED

@@ -210,13 +210,13 @@ struct dayNightCycle
         return false;
     }
 
-    void loadFromFile()
+    void loadFromFile(std::string filePath)
     {
         dayNightCycleVar next = none;
 
         int idx = 0;
 
-        std::ifstream envSet("environment.txt");
+        std::ifstream envSet(filePath.c_str());
         if(envSet.is_open())
         {
             std::string line = "";
@@ -461,7 +461,7 @@ struct unifiedWorld
     std::vector<brick*> recentlyUpdatedBricks;
     std::vector<rope*> ropes;
 
-    rope *addRope(btRigidBody *a,btRigidBody *b,bool useCenterPos = true,btVector3 posA = btVector3(0,0,0),btVector3 posB = btVector3(0,0,0));
+    rope *addRope(btRigidBody *a,btRigidBody *b,btVector3 posA,btVector3 posB,int links,int fixeds);
     void removeRope(rope *toRemove,bool removeFromVector = true);
 
     void setShapeName(dynamic *toSet,std::string text,float r,float g,float b);

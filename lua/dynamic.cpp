@@ -619,14 +619,66 @@ static int attachByRope(lua_State *L)
     scope("attachByRope");
 
     int args = lua_gettop(L);
-    if(args != 2)
+    if(!(args == 3 || args == 9 || args == 10))
     {
-        error("Function expected 2 arguments!");
+        error("Function expected 3, 9, or 10 arguments!");
+        return 0;
+    }
+
+    float x1=0,y1=0,z1=0;
+    float x2=0,y2=0,z2=0;
+    int links = 15;
+    int fixeds = 0;
+
+    if(args == 10)
+    {
+        fixeds = lua_tointeger(L,-1);
+        lua_pop(L,1);
+    }
+
+    if(fixeds < 0 || fixeds > 3)
+    {
+        error("fixeds should be 0,1,2, or 3");
+        return 0;
+    }
+
+    if(args == 9 || args == 10)
+    {
+        z2 = lua_tonumber(L,-1);
+        lua_pop(L,1);
+        y2 = lua_tonumber(L,-1);
+        lua_pop(L,1);
+        x2 = lua_tonumber(L,-1);
+        lua_pop(L,1);
+
+        z1 = lua_tonumber(L,-1);
+        lua_pop(L,1);
+        y1 = lua_tonumber(L,-1);
+        lua_pop(L,1);
+        x1 = lua_tonumber(L,-1);
+        lua_pop(L,1);
+    }
+
+    links = lua_tointeger(L,-1);
+    lua_pop(L,1);
+    if(links < 1 || links > 50)
+    {
+        error("Number of links should be between 1 and 50!");
         return 0;
     }
 
     dynamic *a = popDynamic(L);
     dynamic *b = popDynamic(L);
+
+    if(args == 3)
+    {
+        x2 = a->getWorldTransform().getOrigin().x();
+        y2 = a->getWorldTransform().getOrigin().y();
+        z2 = a->getWorldTransform().getOrigin().z();
+        x1 = b->getWorldTransform().getOrigin().x();
+        y1 = b->getWorldTransform().getOrigin().y();
+        z1 = b->getWorldTransform().getOrigin().z();
+    }
 
     if(!a || !b)
     {
@@ -637,7 +689,93 @@ static int attachByRope(lua_State *L)
     a->activate();
     b->activate();
 
-    common_lua->addRope(a,b);
+    common_lua->addRope(a,b,btVector3(x1,y1,z1),btVector3(x2,y2,z2),links,fixeds);
+
+    return 0;
+}
+
+static int attachByRopeBrick(lua_State *L)
+{
+    scope("attachByRopeBrick");
+
+    int args = lua_gettop(L);
+    if(!(args == 3 || args == 9 || args == 10))
+    {
+        error("Function expected 3, 9, or 10 arguments!");
+        return 0;
+    }
+
+    float x1=0,y1=0,z1=0;
+    float x2=0,y2=0,z2=0;
+    int links = 15;
+    int fixeds = 0;
+
+    if(args == 10)
+    {
+        fixeds = lua_tointeger(L,-1);
+        lua_pop(L,1);
+    }
+
+    if(fixeds < 0 || fixeds > 3)
+    {
+        error("fixeds should be 0,1,2, or 3");
+        return 0;
+    }
+
+    if(args == 9 || args == 10)
+    {
+        z2 = lua_tonumber(L,-1);
+        lua_pop(L,1);
+        y2 = lua_tonumber(L,-1);
+        lua_pop(L,1);
+        x2 = lua_tonumber(L,-1);
+        lua_pop(L,1);
+
+        z1 = lua_tonumber(L,-1);
+        lua_pop(L,1);
+        y1 = lua_tonumber(L,-1);
+        lua_pop(L,1);
+        x1 = lua_tonumber(L,-1);
+        lua_pop(L,1);
+    }
+
+    links = lua_tointeger(L,-1);
+    lua_pop(L,1);
+    if(links < 1 || links > 50)
+    {
+        error("Number of links should be between 1 and 50!");
+        return 0;
+    }
+
+    brick *a = popBrick(L);
+
+    if(!a->body)
+    {
+        error("Brick didn't have body. Maybe collision was off?");
+        return 0;
+    }
+
+    dynamic *b = popDynamic(L);
+
+    if(args == 3)
+    {
+        x2 = a->body->getWorldTransform().getOrigin().x();
+        y2 = a->body->getWorldTransform().getOrigin().y();
+        z2 = a->body->getWorldTransform().getOrigin().z();
+        x1 = b->getWorldTransform().getOrigin().x();
+        y1 = b->getWorldTransform().getOrigin().y();
+        z1 = b->getWorldTransform().getOrigin().z();
+    }
+
+    if(!a || !b)
+    {
+        error("Invalid dynamic or brick for one of the arguments!");
+        return 0;
+    }
+
+    b->activate();
+
+    common_lua->addRope(a->body,b,btVector3(x1,y1,z1),btVector3(x2,y2,z2),links,fixeds);
 
     return 0;
 }
@@ -1016,6 +1154,27 @@ static int setHealth(lua_State *L)
     return 0;
 }
 
+static int clearRopes(lua_State *L)
+{
+    dynamic *toRemove = popDynamic(L);
+
+    auto ropeIter = common_lua->ropes.begin();
+    while(ropeIter != common_lua->ropes.end())
+    {
+        rope *tmp = *ropeIter;
+        if(tmp->anchorA == toRemove || tmp->anchorB == toRemove)
+        {
+            common_lua->removeRope(tmp,false);
+            tmp = 0;
+            ropeIter = common_lua->ropes.erase(ropeIter);
+        }
+        else
+            ++ropeIter;
+    }
+
+    return 0;
+}
+
 
 void registerDynamicFunctions(lua_State *L)
 {
@@ -1035,6 +1194,7 @@ void registerDynamicFunctions(lua_State *L)
         {"setShapeName",setShapeName},
         {"setNodeColor",setNodeColor},
         {"attachByRope",attachByRope},
+        {"attachByRopeBrick",attachByRopeBrick},
         {"attachByHinge",attachByHinge},
         {"getVelocity",getVelocity},
         {"getAngularVelocity",getAngularVelocity},
@@ -1051,6 +1211,7 @@ void registerDynamicFunctions(lua_State *L)
         {"fireHeldGun",fireHeldGun},
         {"getCamDir",getCamDir},
         {"setHealth",setHealth},
+        {"clearRopes",clearRopes},
         {NULL,NULL}};
     luaL_newmetatable(L,"dynamic");
     luaL_setfuncs(L,dynamicRegs,0);
