@@ -654,7 +654,7 @@ int main(int argc, char *argv[])
     info("Starting content server...");
 
     IPaddress ip;
-    if(SDLNet_ResolveHost(&ip,NULL,20001) == -1)
+    if(SDLNet_ResolveHost(&ip,NULL,20000) == -1)
     {
         error("Error resolving content server internal IP");
         return 0;
