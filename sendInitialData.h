@@ -10,6 +10,8 @@ void sendInitalDataFirstHalf(unifiedWorld *common,clientData *source,serverClien
 
     for(unsigned int a = 0; a<common->users.size(); a++)
     {
+        if(common->users[a]->stillInContentPhase)
+            continue;
         packet data;
         data.writeUInt(packetType_addOrRemovePlayer,packetTypeBits);
         data.writeBit(true); // for player's list, not typing players list
