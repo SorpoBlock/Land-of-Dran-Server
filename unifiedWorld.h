@@ -38,6 +38,7 @@ extern "C" {
 struct clientData
 {
     bool allowedToBuild = true;
+    bool stillInContentPhase = true;
 
     //0 if a guest or if we already logged in successfully:
     CURL *authHandle = 0;

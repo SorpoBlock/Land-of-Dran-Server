@@ -1678,6 +1678,8 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                 return;
             }
 
+            source->stillInContentPhase = false;
+
             bool wantsLogin = data->readBit();
             if(wantsLogin)
             {
