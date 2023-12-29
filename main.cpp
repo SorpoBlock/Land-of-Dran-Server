@@ -722,7 +722,17 @@ int main(int argc, char *argv[])
             }
             else
             {
-                info("Accepted a cdn client.");
+                IPaddress *tcpaddr = SDLNet_TCP_GetPeerAddress(cdnClient);
+
+                //Convert IP from 32bit uint to string for later easy access
+                unsigned char qa = tcpaddr->host>>24;
+                unsigned char qb = (tcpaddr->host>>16)&0xff;
+                unsigned char qc = (tcpaddr->host>>8)&0xff;
+                unsigned char qd = tcpaddr->host&0xff;
+                std::stringstream ret;
+                ret<<(unsigned int)qd<<"."<<(unsigned int)qc<<"."<<(unsigned int)qb<<"."<<(unsigned int)qa;
+
+                info("Accepted a cdn client, IP: " + ret.str());
                 SDLNet_SocketSet tmpSocketSet = SDLNet_AllocSocketSet(1);
                 SDLNet_TCP_AddSocket(tmpSocketSet,cdnClient);
                 cdnClientSocketSets.push_back(tmpSocketSet);
