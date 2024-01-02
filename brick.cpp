@@ -1,7 +1,7 @@
 #include "brick.h"
 
 //Be sure to deallocate packets afterwards:
-void addBrickPacketsFromVector(std::vector<brick*> toAdd,std::vector<packet*> &result)
+void addBrickPacketsFromVector(std::vector<brick*> &toAdd,std::vector<packet*> &result)
 {
     int bricksToSend = toAdd.size();
     int bricksSentSoFar = 0;
@@ -11,8 +11,20 @@ void addBrickPacketsFromVector(std::vector<brick*> toAdd,std::vector<packet*> &r
         int bitsLeft = packetMTUbits - (packetTypeBits + 8);
         while(bitsLeft > 0 && (sentThisTime < bricksToSend))
         {
+            if(sentThisTime + bricksSentSoFar >= toAdd.size())
+            {
+                error("addBrickPacketsFromVector " + std::to_string(sentThisTime+bricksSentSoFar) + " > " + std::to_string(toAdd.size()));
+                break;
+            }
+
             brick *tmp = toAdd[sentThisTime + bricksSentSoFar];
-            bitsLeft -= tmp->getPacketBits();
+            if(bitsLeft - ((signed)(tmp->getPacketBits())) < 0)
+                break;
+
+            if(sentThisTime + bricksSentSoFar >= toAdd.size())
+                break;
+
+            bitsLeft -= ((signed)(tmp->getPacketBits()));
             sentThisTime++;
         }
 
@@ -330,10 +342,18 @@ unsigned int brick::getPacketBits(bool fullPos)
     {
         if(printMask != 0 && printID != -1 && printName.length() > 0)
         {
-            packet tmp;
-            tmp.writeString(printName);
-            //std::cout<<"String bits: "<<tmp.getStreamPos()<<"\n";
-            bits += tmp.getStreamPos() + 7;
+            if(printName.length() > 63)
+            {
+                error("Brick had printName longer than 63 characters!");
+                bits++;
+            }
+            else
+            {
+                packet tmp;
+                tmp.writeString(printName);
+                //std::cout<<"String bits: "<<tmp.getStreamPos()<<"\n";
+                bits += tmp.getStreamPos() + 7;
+            }
         }
         else
             bits++;
@@ -425,9 +445,17 @@ void brick::addToPacket(packet *data,bool fullPos)
         data->writeBit(isColliding());
         if(printMask != 0 && printID != -1 && printName.length() > 0)
         {
-            data->writeBit(true);
-            data->writeUInt(printMask,6);
-            data->writeString(printName);
+            if(printName.length() > 63)
+            {
+                error("Brick had print name longer than 63 characters!");
+                data->writeBit(false);
+            }
+            else
+            {
+                data->writeBit(true);
+                data->writeUInt(printMask,6);
+                data->writeString(printName);
+            }
         }
         else
             data->writeBit(false);

@@ -1785,6 +1785,15 @@ void unifiedWorld::clearBricks(clientData *source)
         {
             brick *theBrick = source->ownedBricks[i];
 
+            for(int j = 0; j<bricks.size(); j++)
+            {
+                if(bricks[j] == theBrick)
+                {
+                    bricks.erase(bricks.begin() + j);
+                    break;
+                }
+            }
+
             data.writeUInt(theBrick->serverID,20);
 
             //if(theBrick->music > 0)
@@ -1851,14 +1860,14 @@ void unifiedWorld::clearBricks(clientData *source)
         bricksToRemove -= bricksInThisPacket;
     }
 
-    auto iter = bricks.begin();
+    /*auto iter = bricks.begin();
     while(iter != bricks.end())
     {
         if((*iter)->builtBy == (int)source->playerID)
             iter = bricks.erase(iter);
         else
             ++iter;
-    }
+    }*/
 
     for(unsigned int a = 0; a<source->ownedBricks.size(); a++)
         if(source->ownedBricks[a])
@@ -3123,6 +3132,11 @@ void unifiedWorld::loadBlocklandSave(std::string filePath,std::vector<brick*> &l
 
 dynamic* unifiedWorld::addDynamic(int typeID,float red,float green,float blue)
 {
+    if(typeID < 0 || typeID >= dynamicTypes.size())
+    {
+        error("Dynamic type ID out of range.");
+        return 0;
+    }
     dynamic *tmp = new dynamic(dynamicTypes[typeID],physicsWorld,lastDynamicID,typeID);
     tmp->redTint = red;
     tmp->greenTint = green;
