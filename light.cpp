@@ -18,7 +18,6 @@ void light::sendToClient(serverClientHandle *client)
     }
     else if(attachedCar)
     {
-        std::cout<<"Send light packet has attached car: "<<attachedCar->serverID<<"\n";
         data.writeUInt(2,3);
         data.writeUInt(attachedCar->serverID,10);
         data.writeFloat(offset.x());

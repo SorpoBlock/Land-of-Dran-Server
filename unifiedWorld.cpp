@@ -1764,7 +1764,11 @@ bool unifiedWorld::addBrick(brick *theBrick,bool stopOverlaps,bool colliding,boo
 
 void unifiedWorld::clearBricks(clientData *source)
 {
-    int bricksToRemove = source->ownedBricks.size();
+    for(int a = 0; a<source->ownedBricks.size(); a++)
+        removeBrick(source->ownedBricks[a],true);
+    source->ownedBricks.clear();
+
+    /*int bricksToRemove = source->ownedBricks.size();
     unsigned int bricksRemoved = 0;
 
     if(bricksToRemove == 0)
@@ -1802,6 +1806,12 @@ void unifiedWorld::clearBricks(clientData *source)
             {
                 stopSoundLoop(theBrick->musicLoopId);
                 theBrick->musicLoopId = -1;
+            }
+
+            if(theBrick->attachedLight)
+            {
+                removeLight(theBrick->attachedLight);
+                theBrick->attachedLight = 0;
             }
 
             if(theBrick->body)
@@ -1860,28 +1870,19 @@ void unifiedWorld::clearBricks(clientData *source)
         bricksToRemove -= bricksInThisPacket;
     }
 
-    /*auto iter = bricks.begin();
-    while(iter != bricks.end())
-    {
-        if((*iter)->builtBy == (int)source->playerID)
-            iter = bricks.erase(iter);
-        else
-            ++iter;
-    }*/
-
     for(unsigned int a = 0; a<source->ownedBricks.size(); a++)
         if(source->ownedBricks[a])
             delete source->ownedBricks[a];
 
-    source->ownedBricks.clear();
+    source->ownedBricks.clear();*/
 }
 
-void unifiedWorld::removeBrick(brick *theBrick)
+void unifiedWorld::removeBrick(brick *theBrick,bool skipOwnershipClear)
 {
     if(!theBrick)
         return;
 
-    if(theBrick->builtBy != -1)
+    if(theBrick->builtBy != -1 && !skipOwnershipClear)
     {
         for(unsigned int a = 0; a<users.size(); a++)
         {

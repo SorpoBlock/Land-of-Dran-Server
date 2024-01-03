@@ -475,7 +475,7 @@ struct unifiedWorld
     void setBrickAngleID(brick *theBrick,int angleID);
 
     void clearBricks(clientData *source);
-    void removeBrick(brick *theBrick);
+    void removeBrick(brick *theBrick,bool skipOwnershipClear = false);
     void setBrickName(brick *theBrick,std::string name);
     bool addBrick(brick *theBrick,bool stopOverlaps = false,bool colliding = true,bool networking = true);
     void loadBlocklandSave(std::string filePath,std::vector<brick*> &loadedBricks);
