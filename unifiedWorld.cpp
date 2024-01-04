@@ -1511,7 +1511,10 @@ bool unifiedWorld::compileBrickCar(brickCar *toAdd,float &heightCorrection,bool 
     }*/
 
 
-    //toAdd->halfExtents = btVector3(sizeX/2.0,sizeY/2.0,sizeZ/2.0);
+    btVector3 aabbMax,aabbMin;
+    btTransform dontwantthis;
+    wholeShape->getAabb(dontwantthis,aabbMin,aabbMax);
+    toAdd->halfExtents = (aabbMax-aabbMin)*btScalar(0.5); //btVector3(sizeX/2.0,sizeY/2.0,sizeZ/2.0);
     /*btBoxShape *tmp = new btBoxShape(halfExtents);
     btVector3 inertia;
     float mass = 5;

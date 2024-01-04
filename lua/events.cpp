@@ -1210,7 +1210,6 @@ void weaponFire(dynamic *player,item *gun,float x,float y,float z,float dirX,flo
 
 bool dynamicDeath(dynamic *dying,std::string cause)
 {
-
     eventListener *event = 0;
     for(unsigned int a = 0; a<common_lua->events.size(); a++)
     {
@@ -1358,6 +1357,13 @@ void unifiedWorld::applyDamage(dynamic *d,float damage,std::string cause)
             {
                 if(users[a]->controlling == d)
                 {
+                    if(users[a]->driving) //dismount vehicle get out of car
+                    {
+                        users[a]->driving->driveCar(false,false,false,false,false);
+                        users[a]->driving->occupied = false;
+                        users[a]->driving = 0;
+                    }
+
                     messageAll("[colour='FFFF0000']" + users[a]->name + " has died.","death");
 
                     for(int b = 0; b<queuedRespawn.size(); b++)

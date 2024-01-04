@@ -99,7 +99,7 @@ namespace syj
         unsigned short maxPacketSize = 1500;
         //How many bits to use in critical packet IDs
         //Only needs to be set for server, otherwise it gets the value from the server being connected to
-        unsigned char criticalIDBits = 14;
+        unsigned char criticalIDBits = 18;
         //How long to wait before kicking clients for inactivity, or how long to try and wait for a response from server
         unsigned int timeoutMS = 30000;
         //How long to wait minimum before resending a critical packet
