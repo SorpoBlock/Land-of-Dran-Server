@@ -554,7 +554,17 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
             else
             {
                 for(int a = 0; a<source->loadingCarLights.size(); a++)
+                {
+                    for(int b = 0; b<common->lights.size(); b++)
+                    {
+                        if(common->lights[b] == source->loadingCarLights[a])
+                        {
+                            common->lights.erase(common->lights.begin() + b);
+                            break;
+                        }
+                    }
                     delete source->loadingCarLights[a];
+                }
                 source->loadingCarLights.clear();
                 for(int a = 0; a<source->loadingCar->bricks.size(); a++)
                     delete source->loadingCar->bricks[a];
