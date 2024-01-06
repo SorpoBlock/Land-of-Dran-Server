@@ -206,6 +206,7 @@ static int brickCarSetPosition(lua_State *L)
     btTransform t = passedBrickCar->body->getWorldTransform();
     t.setOrigin(btVector3(x,y,z));
     passedBrickCar->body->setWorldTransform(t);
+    passedBrickCar->body->activate();
 
     return 0;
 }
@@ -253,6 +254,7 @@ static int brickCarSetVelocity(lua_State *L)
         return 0;
     }
 
+    passedBrickCar->body->activate();
     passedBrickCar->body->setLinearVelocity(btVector3(x,y,z));
 
     return 0;

@@ -1426,6 +1426,8 @@ bool unifiedWorld::compileBrickCar(brickCar *toAdd,float &heightCorrection,bool 
     }
     totalBrickY /= ((double)toAdd->bricks.size());
 
+    toAdd->baseLinearDamping = vehiclePrefs.angularDamping;
+
     heightCorrection = (totalWheelY - totalBrickY) + 0.4;
     if(vehiclePrefs.realisticCenterOfMass)
         heightCorrection = 0;
@@ -1574,6 +1576,7 @@ bool unifiedWorld::compileBrickCar(brickCar *toAdd,float &heightCorrection,bool 
         wheel.m_wheelsDampingRelaxation = toAdd->wheels[a].dampingRelaxation;//1;
         wheel.m_frictionSlip = toAdd->wheels[a].frictionSlip;
         wheel.m_rollInfluence = toAdd->wheels[a].rollInfluence;
+        toAdd->wheels[a].lastInWater = SDL_GetTicks();
     }
     //toAdd->addWheels(toAdd->halfExtents);
 
@@ -1583,6 +1586,23 @@ bool unifiedWorld::compileBrickCar(brickCar *toAdd,float &heightCorrection,bool 
         toAdd->sendBricksToClient(users[a]->netRef);
 
     //toAdd->body->setAngularFactor(btVector3(1,0.5,1));
+
+    int musicIdx = -1;
+    for(unsigned int a = 0; a<soundScriptNames.size(); a++)
+    {
+        if(soundScriptNames[a] == "Engine")
+        {
+            musicIdx = a;
+            break;
+        }
+    }
+
+    if(musicIdx != -1)
+    {
+        toAdd->music = musicIdx;
+        toAdd->musicPitch = 1.0;
+        toAdd->musicLoopId = startSoundLoop(musicIdx,toAdd,toAdd->musicPitch);
+    }
 
     return true;
 }

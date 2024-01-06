@@ -584,6 +584,8 @@ int main(int argc, char *argv[])
     common.addSoundType("berettaShot","assets/sound/berettaShot.wav");
     common.addSoundType("berettaReload","assets/sound/berettaReload.wav");
 
+    common.addMusicType("Engine","assets/sound/147242__qubodup__car-engine-loop.wav");
+
     preferenceFile addonsList;
     addonsList.importFromFile("add-ons/add-onsList.txt");
 
@@ -1147,7 +1149,53 @@ int main(int argc, char *argv[])
                 error("Player position messed up: " + std::to_string(pos.x()) + "," + std::to_string(pos.y()) + "," + std::to_string(pos.z()));
                 common.spawnPlayer(common.users[a],5,15,5);
             }
+        }
 
+        if(common.waterLevel > 0)
+        {
+            for(unsigned int a = 0; a<common.brickCars.size(); a++)
+            {
+                if(!common.brickCars[a])
+                    continue;
+                if(!common.brickCars[a]->body)
+                    continue;
+
+                for(int b = 0; b<common.brickCars[a]->wheels.size(); b++)
+                {
+                    btTransform t = common.brickCars[a]->vehicle->getWheelInfo(b).m_worldTransform;
+                    if(t.getOrigin().getY() < (common.waterLevel+2))
+                    {
+                        btVector3 offset = common.brickCars[a]->vehicle->getWheelInfo(b).m_worldTransform.getOrigin() - common.brickCars[a]->body->getWorldTransform().getOrigin();
+                        float boyForce = (2+(common.waterLevel-t.getOrigin().getY())*0.7);
+                        boyForce = std::clamp(boyForce,0.0f,7.0f);
+                        common.brickCars[a]->body->applyImpulse(btVector3(0,boyForce,0),offset);
+                    }
+
+                    if(common.brickCars[a]->wheels[b].lastInWater)
+                    {
+                        if(t.getOrigin().getY() > common.waterLevel + 2)
+                            common.brickCars[a]->wheels[b].lastInWater = false;
+                    }
+                    else
+                    {
+                        if(t.getOrigin().getY() < (common.waterLevel-1))
+                        {
+                            if(common.brickCars[a]->wheels[b].lastSplashEffect + 1000 < SDL_GetTicks())
+                            {
+                                common.brickCars[a]->wheels[b].lastSplashEffect = SDL_GetTicks();
+                                common.brickCars[a]->wheels[b].lastInWater = true;
+                                common.playSound("Splash",t.getOrigin().getX(),common.waterLevel,t.getOrigin().getZ());
+                                common.addEmitter(common.getEmitterType("playerBubbleEmitter"),t.getOrigin().getX(),common.waterLevel,t.getOrigin().getZ());
+                            }
+                        }
+                    }
+                }
+
+                if(common.brickCars[a]->body->getWorldTransform().getOrigin().y() < common.waterLevel)
+                    common.brickCars[a]->body->setDamping(0.3,0.2);
+                else
+                    common.brickCars[a]->body->setDamping(0,common.brickCars[a]->baseLinearDamping);
+            }
         }
 
         for(unsigned int a = 0; a<common.dynamics.size(); a++)

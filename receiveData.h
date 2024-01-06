@@ -1625,8 +1625,8 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                                         data.writeBit(source->lastWrenchedBrick->printMask & 8);
                                         data.writeBit(source->lastWrenchedBrick->printMask & 16);
                                         data.writeBit(source->lastWrenchedBrick->printMask & 32);
-                                        data.writeUInt(source->lastWrenchedBrick->music,10);
-                                        data.writeFloat(source->lastWrenchedBrick->musicPitch);
+                                        data.writeUInt(theCar->music,10);
+                                        data.writeFloat(theCar->musicPitch);
                                         data.writeString(" ");
                                         client->send(&data,true);
 
@@ -1656,7 +1656,8 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
 
             if(theirNetworkVersion != hardCodedNetworkVersion)
             {
-                info("Kicking client with outdated client version!");
+                if(theirNetworkVersion != quitRequestMagic)
+                    info("Kicking client with outdated client version!");
                 host->kick(client);
                 return;
             }

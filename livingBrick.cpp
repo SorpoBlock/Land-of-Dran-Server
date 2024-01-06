@@ -12,6 +12,7 @@ void brickCar::addToPacket(packet *data)
     data->writeFloat(body->getWorldTransform().getOrigin().x());
     data->writeFloat(body->getWorldTransform().getOrigin().y());
     data->writeFloat(body->getWorldTransform().getOrigin().z());
+    data->writeFloat(body->getLinearVelocity().length());
     writeQuat(body->getWorldTransform().getRotation(),data);
 
     data->writeUInt(wheels.size(),5);

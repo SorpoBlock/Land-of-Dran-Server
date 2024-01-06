@@ -8,6 +8,9 @@
 
 struct wheelData
 {
+    bool lastInWater = false;
+    unsigned int lastSplashEffect = 0;
+
     int loadOrder = 0;
     bool dirtEmitterOn = false;
 
@@ -56,6 +59,7 @@ struct brickCar
     int musicLoopId = -1;
     int music = 0;
     float musicPitch = 1.0;
+    float baseLinearDamping = 0.03;
 
     bool doTireEmitter = false;
 

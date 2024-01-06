@@ -49,6 +49,8 @@ using namespace std::chrono;
 #define packetTypeBits 5
 #define packetTypeBitsFromClient 4
 
+#define quitRequestMagic 500
+
 #define packetType_connectionRepsonse 0
 #define packetType_addRemoveDynamic 1
 #define packetType_addDynamicType 2
