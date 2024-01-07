@@ -28,6 +28,9 @@ void unifiedWorld::sendEnvironmentToClient(clientData *client)
         data.writeFloat(sunDirection.x);
         data.writeFloat(sunDirection.y);
         data.writeFloat(sunDirection.z);
+        data.writeFloat(cycle.dncFogColors[2].r);//day colors
+        data.writeFloat(cycle.dncFogColors[2].g);//may not be loaded, but there are defaults set anyway
+        data.writeFloat(cycle.dncFogColors[2].b);
     }
     else
     {

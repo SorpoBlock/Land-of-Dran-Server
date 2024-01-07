@@ -58,6 +58,7 @@ struct item;
 
 struct dynamic : btRigidBody
 {
+    float crouchProgress = 0.0;
     float health = 100.0;
     bool canTakeDamage = false;
 
@@ -115,7 +116,7 @@ struct dynamic : btRigidBody
     void makePlayer();
 
     //Returns true if player has just jumped
-    bool control(float yaw,bool forward,bool backward,bool left,bool right,bool jump,btDynamicsWorld *world,bool allowTurning,bool relativeSpeed,std::vector<btVector3> &colors,std::vector<btVector3> &poses);
+    bool control(float yaw,bool forward,bool backward,bool left,bool right,bool jump,bool crouch,btDynamicsWorld *world,bool allowTurning,bool relativeSpeed,std::vector<btVector3> &colors,std::vector<btVector3> &poses);
 
     virtual void addToPacket(packet *data);
     virtual unsigned int getPacketBits();

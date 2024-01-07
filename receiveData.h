@@ -1251,7 +1251,7 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
         }
         case playerControlPacket:
         {
-            int controlMask = data->readUInt(5);
+            int controlMask = data->readUInt(6);
             bool didJump = data->readBit(); //Just controls the sound
             bool leftMouseDown = data->readBit();
             bool rightMouseDown = data->readBit();

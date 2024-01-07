@@ -287,7 +287,7 @@ void dynamic::addToPacket(packet *data)
     if(isPlayer)
     {
         data->writeBit(walking);
-        data->writeFloat(asin(-lastCamY));
+        data->writeFloat(asin(-lastCamY) - (0.5*3.1415*crouchProgress));
     }
 }
 
@@ -434,7 +434,7 @@ void sayVec3(btVector3 in)
 }
 
 //Returns true if player has just jumped
-bool dynamic::control(float yaw,bool forward,bool backward,bool left,bool right,bool jump,btDynamicsWorld *world,bool allowTurning,bool relativeSpeed,std::vector<btVector3> &colors,std::vector<btVector3> &poses)
+bool dynamic::control(float yaw,bool forward,bool backward,bool left,bool right,bool jump,bool crouch,btDynamicsWorld *world,bool allowTurning,bool relativeSpeed,std::vector<btVector3> &colors,std::vector<btVector3> &poses)
 {
     if(sittingOn)
     {
@@ -471,9 +471,33 @@ bool dynamic::control(float yaw,bool forward,bool backward,bool left,bool right,
         walkVelocityDontTouch += btVector3(sin(yaw+1.57),0,cos(yaw+1.57));
     }
 
+    int deltaMS = SDL_GetTicks() - lastPlayerControl;
+
+    if(deltaMS > 60)
+        deltaMS = 60;
+    if(deltaMS < 0)
+        deltaMS = 0;
+
+    btTransform rotMatrix = getWorldTransform();
+    rotMatrix.setOrigin(btVector3(0,0,0));
+    btVector3 position = getWorldTransform().getOrigin();
+
+    btRigidBody *crouchForcer = 0;
+    if(!crouch && crouchProgress > 0.5)
+    {
+        btVector3 from = position + btVector3(0,0.1,0);
+        btVector3 to = position + btVector3(0,type->finalHalfExtents.y(),0);
+        btVector3 hitpos;
+        crouchForcer = getClosestBody(from,to,world,this,hitpos);
+    }
+
+    if(crouch || !crouchForcer)
+        crouchProgress += (crouch?1.0:-1.0) * ((float)deltaMS)/200.0;
+    crouchProgress = std::clamp(crouchProgress,0.0f,1.0f);
+
     if(isJetting)
     {
-        setGravity(btVector3(0,20,0));
+        setGravity(btVector3(crouchProgress*20*sin(yaw),20*(1.0-crouchProgress),crouchProgress*20*cos(yaw)));
         //applyCentralForce(walkVelocity * 20);
     }
     else
@@ -485,48 +509,57 @@ bool dynamic::control(float yaw,bool forward,bool backward,bool left,bool right,
     float speed = 15.0;
     float blendTime = 50;
 
+    speed *= (1.0-crouchProgress)*0.5 + 0.5;
+
     if(!type)
     {
         error("Tried to control (i.e. like a player) dynamic without a type (i.e. a vehicle)?");
         return false;
     }
-
     if(allowTurning)
     {
-        btTransform t = getWorldTransform();
-        t.setRotation(btQuaternion(3.1415 + yaw,0,0));
+        float crouchRot = crouchProgress * -(3.1415/2.0);
+        btTransform t = getWorldTransform();//3.1415/2.0
+        t.setRotation(btQuaternion(3.1415 + yaw,crouchRot,0));
         setWorldTransform(t);
     }
 
-    btTransform rotMatrix = getWorldTransform();
-    rotMatrix.setOrigin(btVector3(0,0,0));
-    btVector3 position = getWorldTransform().getOrigin();
-
     btVector3 normal;
     btRigidBody *ground = 0;
-    for(int gx = -1; gx<=1; gx++)
-    {
-        for(int gz = -1; gz<=1; gz++)
-        {
-            btVector3 lateralOffsets = btVector3(type->finalHalfExtents.x() * gx, 0, type->finalHalfExtents.z() * gz);
-            lateralOffsets = rotMatrix * lateralOffsets;
 
-            ground = getClosestBody(position+btVector3(0,type->finalHalfExtents.y()*0.1,0),position - btVector3(lateralOffsets.x(),type->finalHalfExtents.y()*0.1,lateralOffsets.z()),world,normal);
+    if(crouchProgress > 0.5)
+    {
+        btVector3 from = position - btVector3(0,type->finalHalfExtents.z(),0) + btVector3(0,0.1,0);
+        btVector3 to   = position - btVector3(0,type->finalHalfExtents.z(),0) - btVector3(0,0.1,0);
+        btVector3 hitpos;
+        ground = getClosestBody(from,to,world,this,hitpos,normal);
+    }
+    else
+    {
+        for(int gx = -1; gx<=1; gx++)
+        {
+            for(int gz = -1; gz<=1; gz++)
+            {
+                btVector3 lateralOffsets = btVector3(type->finalHalfExtents.x() * gx, 0, type->finalHalfExtents.z() * gz);
+                lateralOffsets = rotMatrix * lateralOffsets;
+
+                btVector3 hitpos;
+                ground = getClosestBody(
+                                        position+btVector3(0,1.0*crouchProgress+type->finalHalfExtents.y()*0.1,0),
+                                        position - btVector3(lateralOffsets.x(),type->finalHalfExtents.y()*0.1,lateralOffsets.z()),
+                                        world,
+                                        this,
+                                        hitpos,
+                                        normal);
+
+                if(ground)
+                    break;
+            }
 
             if(ground)
                 break;
         }
-
-        if(ground)
-            break;
     }
-
-    int deltaMS = SDL_GetTicks() - lastPlayerControl;
-
-    if(deltaMS > 60)
-        deltaMS = 60;
-    if(deltaMS < 0)
-        deltaMS = 0;
 
     lastPlayerControl = SDL_GetTicks();
 
@@ -588,6 +621,9 @@ bool dynamic::control(float yaw,bool forward,bool backward,bool left,bool right,
         setLinearVelocity(endVel);
 
     if(!ground)
+        return false;
+
+    if(crouchProgress > 0.5)
         return false;
 
     btVector3 dir = walkVelocityDontTouch.normalize();
