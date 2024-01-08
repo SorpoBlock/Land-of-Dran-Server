@@ -955,6 +955,12 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
             }
             else if(body->getUserIndex() == bodyUserIndex_builtCar)
             {
+                if(source->driving)
+                {
+                    if(source->driving->body == body)
+                        return;
+                }
+
                 if(!body->getUserPointer())
                     return;
                 brickCar *car = (brickCar*)body->getUserPointer();
@@ -1641,8 +1647,18 @@ void receiveData(server *host,serverClientHandle *client,packet *data)
                     }
                 }
             }
+
             if(source->driving)
             {
+                if(leftMouseDown)
+                {
+                    if(source->driving->lastHonk + 1000 < SDL_GetTicks())
+                    {
+                        btVector3 pos = source->driving->body->getWorldTransform().getOrigin();
+                        source->driving->lastHonk = SDL_GetTicks();
+                        common->playSound("Honk",pos.x(),pos.y(),pos.z());
+                    }
+                }
                 bool speeding = source->driving->driveCar(controlMask & 1,controlMask & 2,controlMask & 4,controlMask & 8,controlMask &16);
                 if(speeding)
                     source->bottomPrint("You have reached this car's max speed!",5000);

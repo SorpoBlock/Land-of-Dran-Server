@@ -56,6 +56,7 @@ struct steeringBrick : brick
 
 struct brickCar
 {
+    unsigned int lastHonk = 0;
     int musicLoopId = -1;
     int music = 0;
     float musicPitch = 1.0;

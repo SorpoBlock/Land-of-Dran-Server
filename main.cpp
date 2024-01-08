@@ -585,6 +585,7 @@ int main(int argc, char *argv[])
     common.addSoundType("berettaReload","assets/sound/berettaReload.wav");
 
     common.addMusicType("Engine","assets/sound/147242__qubodup__car-engine-loop.wav");
+    common.addSoundType("Honk","assets/sound/434878__mickthemicguy__car-honking.wav");
 
     preferenceFile addonsList;
     addonsList.importFromFile("add-ons/add-onsList.txt");
