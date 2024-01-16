@@ -87,7 +87,33 @@ class Tdynamic : simObject
 
     //Start type specific functions:
 
+    //Per frame calculations for non-players that make them float in water or splash
+    void applyBuoyancy();
 
+    //Per frame calculations if isProjectile is true that makes object rotation in direction of velocity
+    void applyProjectileRotation();
+
+    //Gets a packet that when sent to a client updates the node colors and decal texture selection
+    void getAppearancePacket(packet * const data) const;
+
+    //Sets the color of one node, getAppearancePacket result should be broadcast after any node changes in a given frame are completed
+    void setNodeColor(const std::string &node,float r,float g,float b);
+
+    //Same as setNodeColor, send getAppearancePacket after calling this to update clients
+    void setDecal(unsigned int decalIdx);
+
+    //Changes or removes the text above an object and broadcasts it to all connected clients
+    void setShapeName(const std::string &text,float r,float g,float b,syj::server * const server);
+
+    //Applies damage, objects by default have 100 health, does nothing if canTakeDamage is false, returns if the object has died / should be destroyed
+    bool applyDamage(float amount,const std::string &cause = "");
+
+    //Animation status is not tracked anywhere server-side, so there's no way to poll if an animation is playing or any guarentee what frame it is in
+    //1.0 is normal speed, resetFrame sets the frame of that particular animation back to 0 if it was already playing
+    void playAnimation(const std::string &animationName,float speed,bool resetFrame,bool loop = false);
+
+    //Blank string stops all animations
+    void stopAnimation(const std::string &animationName = "");
 };
 
 #endif // TDYNAMIC_H_INCLUDED
