@@ -51,6 +51,11 @@ using namespace std::chrono;
 
 #define quitRequestMagic 500
 
+//Used in new code, not yet:
+#define packetType_addSimObject 1
+#define packetType_removeSimObject 8
+#define packetType_updateSimObject 26
+
 #define packetType_connectionRepsonse 0
 #define packetType_addRemoveDynamic 1
 #define packetType_addDynamicType 2

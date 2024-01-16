@@ -1,5 +1,10 @@
 #include "code/unifiedWorld.h"
 
+unifiedWorld::unifiedWorld() : Tlights(simObjectLight), Tdynamics(simObjectDynamic)
+{
+
+}
+
 fileType discernExtension(std::string extension)
 {
     //TODO: Add the rest of the files lol

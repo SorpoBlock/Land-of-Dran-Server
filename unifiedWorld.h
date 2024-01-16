@@ -16,6 +16,10 @@
 #include "code/octree/RTree.h"
 #include <BulletCollision/CollisionDispatch/btGhostObject.h>
 
+#include "code/newCode/objHolder.h"
+#include "code/newCode/light.h"
+#include "code/newCode/Tdynamic.h"
+
 typedef RTree<brick*,double,3> brickPointerTree;
 
 //#define bodyUserIndex_brick 55
@@ -328,6 +332,14 @@ struct fileDescriptor
 
 struct unifiedWorld
 {
+    //Under construction:
+    objHolder<Tlight> Tlights;
+    objHolder<Tdynamic> Tdynamics;
+
+    unifiedWorld();
+
+    //Old stuff:
+
     int nextFileID = 0;
     std::vector<fileDescriptor> customFiles;
 

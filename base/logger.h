@@ -80,6 +80,6 @@ namespace syj
 
 //Adds a scope name to the stack, and removes it when the current scope is left
 //If this throws an error saying undefined, be sure you're using namespace syj
-#define scope(n) addScope(n); scopeLogger tempScopeName;
+#define scope(n) addScope(n); syj::scopeLogger tempScopeName;
 
 #endif // LOGGER_H_INCLUDED

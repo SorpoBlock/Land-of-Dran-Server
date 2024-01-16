@@ -363,6 +363,7 @@ int main(int argc, char *argv[])
     btGImpactCollisionAlgorithm::registerAlgorithm(dispatcher);
     //common.physicsWorld = new btDiscreteDynamicsWorld(dispatcher, broadphase, solver, collisionConfiguration);
     common.physicsWorld = new btSoftRigidDynamicsWorld(dispatcher, broadphase, solver, collisionConfiguration);
+    simObject::world = common.physicsWorld;
     //TODO: This line was only added after radiusImpulse, does it decrease performance?
     common.physicsWorld->getBroadphase()->getOverlappingPairCache()->setInternalGhostPairCallback(new btGhostPairCallback());
     btVector3 gravity = btVector3(0,-70,0);
@@ -390,6 +391,9 @@ int main(int argc, char *argv[])
     common.theServer->connectHandle = onConnection;
     common.theServer->disconnectHandle = onDisconnect;
     common.theServer->userData = &common;
+
+    common.Tlights.setServer(common.theServer);
+    common.Tdynamics.setServer(common.theServer);
 
     info("Loading Lua libraries");
 

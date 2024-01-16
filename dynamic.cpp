@@ -302,6 +302,7 @@ dynamic::dynamic(dynamicType *type_,btDynamicsWorld *world,int idServer,int idTy
     world->addRigidBody(this);
 }
 
+//Apparently only used in compileBrickCar
 dynamic::dynamic(btScalar mass,btMotionState *ms,btCollisionShape *shape,btVector3 inertia,int idServer,btDynamicsWorld *world)
 : btRigidBody(mass,ms,shape,inertia)
 {
