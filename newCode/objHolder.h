@@ -144,6 +144,23 @@ class objHolder
     //How many objects of this type (in the entire program, hopefully) exist
     const inline size_t size() const{return allObjs.size();}
 
+    //Used to delete an object you found as the result of ex. a collision callback where you just have the raw pointer 
+    inline void destroyByPointer(T *target)
+    {
+        auto hasPointer = [&target](const std::shared_ptr<T> &query) { return query.get() == target; };
+        auto it = std::find_if(allObjs.begin(),allObjs.end(),hasPointer);
+        if(it != allObjs.end())
+        {
+            recentDeletions.push_back((*it)->netID);
+            allObjs.erase(it);
+        }
+        else
+        {
+            syj::scope("objHolder::destroy");
+            syj::error("Pointer not found in objHolder");
+        }
+    }
+
     //idk why this would be used either
     inline void destroyByIdx(const size_t &idx)
     {
