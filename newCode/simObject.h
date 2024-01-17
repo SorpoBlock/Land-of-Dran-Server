@@ -31,7 +31,7 @@ class simObject
     static btDynamicsWorld *world;
 
     //Has this object been updated in such a way that we need to resend its properties to clients?
-    bool requiresNetUpdate() const;
+    virtual bool requiresNetUpdate() const;
 
     //objHolder should call this if requiresNetUpdate is true, resets requiresUpdate
     void addToUpdatePacket(syj::packet * const data);

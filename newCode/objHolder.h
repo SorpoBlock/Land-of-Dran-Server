@@ -124,15 +124,6 @@ class objHolder
         recentCreations.push_back(allObjs.back());
     };
 
-    //Exchange netID (i.e. from incoming client packet, lua callback) for vector index
-    //Honestly no clue when this would be needed
-    const inline size_t findIdx(const netIDtype &netID) const
-    {
-        auto hasNetID = [&netID](const std::shared_ptr<T> &query) { return query->netID == netID; };
-        auto it = std::find_if(allObjs.begin(),allObjs.end(),hasNetID);
-        return it - allObjs.begin();
-    }
-
     //Exchange netID (i.e. from incoming client packet, lua callback) for object itself
     const inline std::shared_ptr<T> find(const netIDtype &netID) const
     {
@@ -144,7 +135,7 @@ class objHolder
     //How many objects of this type (in the entire program, hopefully) exist
     const inline size_t size() const{return allObjs.size();}
 
-    //Used to delete an object you found as the result of ex. a collision callback where you just have the raw pointer 
+    //Used to delete an object you found as the result of ex. a collision callback where you just have the raw pointer
     inline void destroyByPointer(T *target)
     {
         auto hasPointer = [&target](const std::shared_ptr<T> &query) { return query.get() == target; };
@@ -159,6 +150,15 @@ class objHolder
             syj::scope("objHolder::destroy");
             syj::error("Pointer not found in objHolder");
         }
+    }
+
+    //Exchange netID (i.e. from incoming client packet, lua callback) for vector index
+    //Honestly no clue when this would be needed
+    const inline size_t findIdx(const netIDtype &netID) const
+    {
+        auto hasNetID = [&netID](const std::shared_ptr<T> &query) { return query->netID == netID; };
+        auto it = std::find_if(allObjs.begin(),allObjs.end(),hasNetID);
+        return it - allObjs.begin();
     }
 
     //idk why this would be used either
