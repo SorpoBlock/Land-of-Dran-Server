@@ -18,7 +18,7 @@
 
 #include "code/newCode/objHolder.h"
 #include "code/newCode/light.h"
-#include "code/newCode/Tdynamic.h"
+#include "code/newCode/Titem.h"
 
 typedef RTree<brick*,double,3> brickPointerTree;
 

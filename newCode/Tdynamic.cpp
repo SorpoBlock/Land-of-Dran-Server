@@ -263,6 +263,7 @@ void Tdynamic::setNodeColor(const std::string &node,const btVector3 &nodeColor)
     }
 }
 
+//This was totally worth a function
 void Tdynamic::setDecal(unsigned int decalIdx)
 {
     chosenDecal = decalIdx;
