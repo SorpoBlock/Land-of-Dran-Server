@@ -101,7 +101,7 @@ void Tdynamic::addToUpdatePacketFinal(syj::packet * const data)
 void Tdynamic::pushLua(lua_State * const L)
 {
     lua_newtable(L);
-    lua_getglobal(L,"dynamic"); //TODO: dynamicMETATABLE
+    lua_getglobal(L,"dynamicMETATABLE");
     lua_setmetatable(L,-2);
     lua_pushinteger(L,netID);
     lua_setfield(L,-2,"id");

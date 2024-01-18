@@ -4,18 +4,56 @@
 #include "code/newCode/Tdynamic.h"
 #include "code/item.h"
 
-struct Titem : Tdynamic
+struct Titem : protected Tdynamic
 {
     //friend objHolder<Tdynamic>;
     friend objHolder<Titem>;
 
-    private:
-
-
-
     protected:
 
     explicit Titem(itemType *_type,const btVector3 &initialPos = btVector3(0,0,0));
+
+    itemType *itemProperties = 0;
+
+    //The player that's holding these must remember to update these if they drop this item!
+    bool isBeingHeld = false;
+    unsigned int holderNetID = 0;
+
+    bool isHidden = false;
+    bool isSwinging = false;
+
+    //Related to behavior when an item is fired:
+
+    //Should we call a raycast hit event when the player clicks ("fires")
+    bool performRaycast = false;
+
+    //Note other than sending info to clients, server doesn't do much with these values
+
+    //Animation
+    int nextFireAnim = -1;
+    float nextFireAnimSpeed = 1.0;
+
+    //Sound
+    int nextFireSound = -1;
+    float nextFireSoundPitch = 1.0;
+    float nextFireSoundGain = 1.0;
+
+    //Where on the model the emitter should be spawned, if not its origin
+    std::string nextFireEmitterMesh = "";
+    int nextFireEmitter = -1;
+
+    //Milliseconds between firings
+    int fireCooldownMS = 0;
+
+    //bullet trail
+    bool useBulletTrail = true;
+    btVector3 bulletTrailColor = btVector3(1.0,0.5,0.0);
+    float bulletTrailSpeed = 1.0;
+
+    //End weapon fire settings
+
+    //Compared to fireCooldownMS and SDL_GetTicks
+    int lastFireEvent = 0;
 
     public:
 
@@ -43,6 +81,40 @@ struct Titem : Tdynamic
     void pushLua(lua_State * const L) override;
 
     ~Titem();
+
+    //Class specific methods:
+
+    void removeHolder();
+    void addHolder(unsigned int netID);
+
+    void setHidden(bool value);
+    void setSwinging(bool value);
+
+    //Item fire behavior:
+    void setFireAnim(syj::server * const server,const std::string &animName,float animSpeed);
+    void setFireSound(syj::server * const server,int soundIdx,float pitch,float gain);
+    void setFireEmitter(syj::server * const server,int emitterIdx,const std::string &emitterMesh = "");
+    void setItemCooldown(syj::server * const server,int milliseconds);
+    void setItemBulletTrail(syj::server * const server,bool use,btVector3 color,float speed);
+    void setPerformRaycast(bool toggle);
 };
 
 #endif // TITEM_H_INCLUDED
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

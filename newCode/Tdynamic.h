@@ -29,11 +29,11 @@ enum clientPhysicsPacketType
 //Maximum of 1024 different types of dynamics / models
 #define dynamicTypeIDBits 10
 
-class Tdynamic : simObject
+class Tdynamic : protected simObject
 {
     friend objHolder<Tdynamic>;
 
-    private:
+    protected:
 
     //Always assigned in constructor, contains collision shape and animations among other things
     dynamicType *type = 0;
@@ -75,8 +75,6 @@ class Tdynamic : simObject
     btVector3 lastPosition = btVector3(0.0,0.0,0.0);
     btQuaternion lastRotation = btQuaternion(0.0,0.0,0.0);
     unsigned int lastSendTransformTime = 0; //In MS since server start. So we can make sure even non-moving objects occasionally get sent
-
-    protected:
 
     explicit Tdynamic(dynamicType *_type,const btVector3 &initialPos = btVector3(0,0,0));
 

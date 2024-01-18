@@ -52,6 +52,16 @@ struct dynamicType
     dynamicType(std::string filePath,int id,btVector3 scale);
 
     void sendTypeToClient(serverClientHandle *client,int id);
+
+    int getAnimationIdx(const std::string &name) const
+    {
+        for(unsigned int a = 0; a<animations.size(); a++)
+        {
+            if(animations[a].name == name)
+                return a;
+        }
+        return -1;
+    }
 };
 
 struct item;
