@@ -1,8 +1,8 @@
 #ifndef TITEM_H_INCLUDED
 #define TITEM_H_INCLUDED
 
-#include "code/newCode/Tdynamic.h"
 #include "code/item.h"
+#include "code/newCode/Tdynamic.h"
 
 struct Titem : protected Tdynamic
 {
@@ -89,6 +89,8 @@ struct Titem : protected Tdynamic
 
     void setHidden(bool value);
     void setSwinging(bool value);
+
+    std::string getTypeName() const;
 
     //Item fire behavior:
     void setFireAnim(syj::server * const server,const std::string &animName,float animSpeed);

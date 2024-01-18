@@ -5,6 +5,7 @@ Titem::Titem(itemType *_type,const btVector3 &initialPos)
 {
     itemProperties = _type;
     body->setUserIndex(bodyUserIndex_item);
+    isItem = true;
 }
 
 bool Titem::requiresNetUpdate() const
@@ -216,6 +217,11 @@ void Titem::addHolder(unsigned int netID)
     requiresUpdate = true;
     isBeingHeld = true;
     holderNetID = netID;
+}
+
+std::string Titem::getTypeName() const
+{
+    return itemProperties->uiName;
 }
 
 Titem::~Titem()

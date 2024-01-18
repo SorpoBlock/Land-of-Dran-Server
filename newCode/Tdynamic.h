@@ -1,8 +1,8 @@
 #ifndef TDYNAMIC_H_INCLUDED
 #define TDYNAMIC_H_INCLUDED
 
-#include "code/newCode/simObject.h"
 #include "code/dynamic.h"
+#include "code/newCode/simObject.h"
 
 /*
     Dynamics are any physics object. All movable btRigidBody(s) except car chassis (for now) are owned by dynamics.

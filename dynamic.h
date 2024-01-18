@@ -1,5 +1,5 @@
-#ifndef PLAYER_H_INCLUDED
-#define PLAYER_H_INCLUDED
+#ifndef OLDDYNAMIC_H_INCLUDED
+#define OLDDYNAMIC_H_INCLUDED
 
 #include "code/base/server.h"
 #include "code/base/logger.h"
@@ -134,4 +134,4 @@ struct dynamic : btRigidBody
     dynamic(dynamicType *type,btDynamicsWorld *world,int idServer,int idType);
 };
 
-#endif // PLAYER_H_INCLUDED
+#endif // OLDDYNAMIC_H_INCLUDED
